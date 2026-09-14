@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NTG Beta</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <body><h1>Beta Stage 2/5</h1></body>
     <style>
         @import url('https://fonts.cdnfonts.com/css/comic-sans-ms');
 
@@ -686,7 +687,12 @@
             <!-- GAMEOVER OVERLAY -->
             <div id="gameOverOverlay" class="hidden absolute inset-0 bg-red-900/90 flex flex-col items-center justify-center p-6 text-white text-center">
                 <h2 id="gameOverTitle" class="text-5xl font-black text-yellow-300 drop-shadow-[4px_4px_0px_#000] mb-4">DETENTION!</h2>
-                <p id="gameOverReason" class="text-xl mb-6 bg-black px-4 py-2 border-2 border-white">The teacher caught you!</p>
+                <p id="gameOverReason" class="text-xl mb-4 bg-black px-4 py-2 border-2 border-white">The teacher caught you!</p>
+                <div id="slackRatingBox" class="hidden text-black bg-yellow-200 border-2 border-black px-4 py-2 mb-6 font-black shadow-[4px_4px_0px_#000]">
+                    <p class="text-xs">🎓 SLACK RATING</p>
+                    <p id="slackRatingStars" class="text-3xl leading-tight"></p>
+                    <p id="slackRatingLabel" class="text-sm"></p>
+                </div>
                 <div class="flex flex-wrap justify-center gap-3">
                     <button id="retryLevelBtn" onclick="restartGame()" class="paint-button text-xl font-bold px-6 py-3 bg-yellow-400 text-black hover:bg-yellow-300">
                         🔄 RESTART LEVEL
@@ -786,6 +792,13 @@
         let screenShake = 0;
         let spawnSafeTime = 0;
         let combo = 0;
+        // Pop quiz: low-chance required extra assignment gating a level exit.
+        let popQuizPending = null;
+        let popQuizShownThisLevel = false;
+        let isPopQuiz = false;
+        // Slack tracking for the end-of-run star rating.
+        let slackSeconds = 0;
+        let activeSeconds = 0;
         let maxFps = 60;
         let frameInterval = 1000 / maxFps;
         let lastFrameTime = 0;
@@ -855,12 +868,12 @@
                 doors: [
                     { x: 40, y: 280, w: 40, h: 100, targetRoom: 'Math', targetX: 700, targetY: 300 },
                     { x: 1460, y: 280, w: 40, h: 100, targetRoom: 'ELA', targetX: 70, targetY: 300 },
-                    { x: 380, y: 100, w: 80, h: 80, targetRoom: 'Science', targetX: 400, targetY: 300, reqAbility: 'canDoubleJump', label: 'High Vent (Requires Double Jump)' },
+                    { x: 380, y: 180, w: 80, h: 80, targetRoom: 'Science', targetX: 400, targetY: 300, reqAbility: 'canDoubleJump', label: 'High Vent (Requires Double Jump)' },
                     { x: 680, y: 280, w: 70, h: 100, targetRoom: 'Gym', targetX: 70, targetY: 300, reqAbility: 'canDash', label: 'Gym Lock (Requires Dash)' },
-                    { x: 1040, y: 110, w: 90, h: 70, targetRoom: 'Art', targetX: 70, targetY: 300, reqAbility: 'canStealth', label: 'Quiet Art Wing (Requires Stealth)' },
-                    { x: 180, y: 110, w: 90, h: 70, targetRoom: 'Computer', targetX: 70, targetY: 300, reqAbility: 'canDoubleJump', label: 'Computer Lab (Requires Double Jump)' },
-                    { x: 1240, y: 260, w: 90, h: 80, targetRoom: 'Cafeteria', targetX: 70, targetY: 300, label: 'Cafeteria' },
-                    { x: 790, y: 20, w: 60, h: 60, targetRoom: 'Principal', targetX: 400, targetY: 320, reqAbility: 'hasMasterKey', reqCore: true, label: 'Principal Office (Requires all classes)' }
+                    { x: 1080, y: 140, w: 90, h: 70, targetRoom: 'Art', targetX: 70, targetY: 300, reqAbility: 'canStealth', label: 'Quiet Art Wing (Requires Stealth)' },
+                    { x: 110, y: 150, w: 90, h: 70, targetRoom: 'Computer', targetX: 70, targetY: 300, reqAbility: 'canDoubleJump', label: 'Computer Lab (Requires Double Jump)' },
+                    { x: 1240, y: 300, w: 90, h: 80, targetRoom: 'Cafeteria', targetX: 70, targetY: 300, label: 'Cafeteria' },
+                    { x: 790, y: 120, w: 60, h: 60, targetRoom: 'Principal', targetX: 400, targetY: 320, reqAbility: 'hasMasterKey', reqCore: true, label: 'Principal Office (Requires all classes)' }
                 ],
                 platforms: [
                     { x: 0, y: 380, w: 1600, h: 70 },
@@ -987,10 +1000,10 @@
                 title: 'LEVEL 2: SECOND FLOOR', color: '#d9f0ff', width: 1600,
                 doors: [
                     { x: 40, y: 280, w: 50, h: 100, targetRoom: 'WestbridgeHub', targetX: 680, targetY: 300 },
-                    { x: 430, y: 220, w: 70, h: 100, targetRoom: 'HistoryClass', targetX: 100, targetY: 300 },
-                    { x: 850, y: 220, w: 70, h: 100, targetRoom: 'ChemistryClass', targetX: 100, targetY: 300 },
-                    { x: 1250, y: 220, w: 70, h: 100, targetRoom: 'MusicClass', targetX: 100, targetY: 300 },
-                    { x: 1470, y: 100, w: 70, h: 90, targetRoom: 'Level2Exit', targetX: 400, targetY: 320, reqCore: true, reqSecondFloor: true, label: 'Rooftop Stairwell' }
+                    { x: 290, y: 200, w: 70, h: 100, targetRoom: 'HistoryClass', targetX: 100, targetY: 300 },
+                    { x: 980, y: 210, w: 70, h: 100, targetRoom: 'ChemistryClass', targetX: 100, targetY: 300 },
+                    { x: 1360, y: 160, w: 70, h: 100, targetRoom: 'MusicClass', targetX: 100, targetY: 300 },
+                    { x: 1470, y: 290, w: 70, h: 90, targetRoom: 'Level2Exit', targetX: 400, targetY: 320, reqCore: true, reqSecondFloor: true, label: 'Rooftop Stairwell' }
                 ],
                 platforms: [
                     { x: 0, y: 380, w: 1600, h: 70 }, { x: 180, y: 300, w: 180, h: 20 },
@@ -1003,21 +1016,21 @@
             },
             HistoryClass: {
                 title: 'SECOND FLOOR: HISTORY', color: '#fff0c9',
-                doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: 'SecondFloor', targetX: 470, targetY: 300 }],
+                doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: 'SecondFloor', targetX: 330, targetY: 300 }],
                 platforms: [{ x: 0, y: 380, w: 800, h: 70 }, { x: 140, y: 290, w: 180, h: 20 }, { x: 430, y: 230, w: 210, h: 20 }],
                 desk: { x: 500, y: 180, w: 60, h: 50, subject: 'History' },
                 teacher: { x: 620, y: 330, range: 145, dir: -1, timer: 0, state: 'WRITING' }
             },
             ChemistryClass: {
                 title: 'SECOND FLOOR: CHEMISTRY', color: '#e6ffe6',
-                doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: 'SecondFloor', targetX: 890, targetY: 300 }],
+                doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: 'SecondFloor', targetX: 1010, targetY: 300 }],
                 platforms: [{ x: 0, y: 380, w: 800, h: 70 }, { x: 100, y: 280, w: 170, h: 20 }, { x: 370, y: 210, w: 180, h: 20 }, { x: 630, y: 290, w: 120, h: 20 }],
                 desk: { x: 420, y: 160, w: 60, h: 50, subject: 'Chemistry' },
                 teacher: { x: 210, y: 330, range: 135, dir: 1, timer: 0, state: 'WRITING' }
             },
             MusicClass: {
                 title: 'SECOND FLOOR: MUSIC', color: '#f0e6ff',
-                doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: 'SecondFloor', targetX: 1290, targetY: 300 }],
+                doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: 'SecondFloor', targetX: 1390, targetY: 250 }],
                 platforms: [{ x: 0, y: 380, w: 800, h: 70 }, { x: 120, y: 280, w: 180, h: 20 }, { x: 400, y: 220, w: 180, h: 20 }, { x: 640, y: 290, w: 120, h: 20 }],
                 desk: { x: 440, y: 170, w: 60, h: 50, subject: 'MusicClass' },
                 teacher: { x: 650, y: 330, range: 155, dir: -1, timer: 0, state: 'WRITING' }
@@ -1027,7 +1040,7 @@
                 doors: [
                     { x: 20, y: 280, w: 50, h: 100, targetRoom: 'WestbridgeShop', targetX: 110, targetY: 300 },
                     { x: 740, y: 280, w: 50, h: 100, targetRoom: 'WestbridgeLab', targetX: 100, targetY: 300 },
-                    { x: 360, y: 90, w: 80, h: 80, targetRoom: 'SecondFloor', targetX: 80, targetY: 300, label: 'Second Floor' }
+                    { x: 360, y: 100, w: 80, h: 80, targetRoom: 'SecondFloor', targetX: 80, targetY: 300, label: 'Second Floor' }
                 ],
                 platforms: [
                     { x: 0, y: 380, w: 800, h: 70 },
@@ -1433,6 +1446,11 @@
             particles = [];
             roomBanner = { text: '', time: 0 };
             combo = 0;
+            popQuizPending = null;
+            popQuizShownThisLevel = false;
+            isPopQuiz = false;
+            slackSeconds = 0;
+            activeSeconds = 0;
             level = retryLevel;
             if (retryLevel === 1) {
                 coins = 0;
@@ -1478,9 +1496,13 @@
             const classSubjects = shuffleArray(['History', 'Chemistry', 'MusicClass', 'Math', 'Science', 'ELA', 'Art', 'Computer', 'Cafeteria', 'Gym'])
                 .slice(0, 6);
             const generatedSubjects = classSubjects.map((subject, index) => `L${levelNumber}C${index + 1}`);
+            // Door y-values are set so each door rests directly on top of the
+            // platform beneath it (platforms sit at y: 300, 270, 310, 260, 300, 250),
+            // which also staggers the doors' heights instead of lining them up in a flat row.
+            const classDoorHeights = [200, 170, 210, 160, 200, 150];
             const classDoors = generatedSubjects.map((subject, index) => ({
                 x: 260 + index * 380,
-                y: 220,
+                y: classDoorHeights[index % classDoorHeights.length],
                 w: 70,
                 h: 100,
                 targetRoom: `${hubKey}Class${index + 1}`,
@@ -1490,7 +1512,7 @@
             }));
             classDoors.push({
                 x: 2450,
-                y: 100,
+                y: 280,
                 w: 80,
                 h: 100,
                 targetRoom: 'FinalExit',
@@ -1557,6 +1579,9 @@
             energy = maxEnergy;
             sprintStamina = maxSprintStamina;
             player.sprintLocked = false;
+            popQuizPending = null;
+            popQuizShownThisLevel = false;
+            isPopQuiz = false;
             gameState = 'PLAYING';
             document.getElementById('levelCompleteOverlay').classList.add('hidden');
             document.getElementById('gameOverOverlay').classList.add('hidden');
@@ -1587,6 +1612,9 @@
             energy = maxEnergy;
             sprintStamina = maxSprintStamina;
             player.sprintLocked = false;
+            popQuizPending = null;
+            popQuizShownThisLevel = false;
+            isPopQuiz = false;
             currentRoomKey = hubKey;
             cameraX = 0;
             player.x = 100;
@@ -1613,6 +1641,44 @@
             playTone(880, 0.2);
         }
 
+        // Performs the actual "leaving the level" transition for a level-exit door.
+        // Split out from the door-trigger loop so it can also be resumed after the
+        // player clears a required pop quiz that was gating that same door.
+        function completeLevelExit(d) {
+            if (d.targetRoom === 'Principal') {
+                showLevel1Complete();
+                doorIntent = false;
+                return;
+            }
+
+            if (d.targetRoom === 'Level2Exit') {
+                currentRoomKey = 'Level2Exit';
+                player.x = d.targetX;
+                player.y = d.targetY;
+                player.vx = 0;
+                player.vy = 0;
+                updateUI();
+                doorIntent = false;
+                spawnSafeTime = 0.8;
+                triggerWin();
+                return;
+            }
+
+            if (d.targetRoom === 'FinalExit') {
+                currentRoomKey = 'FinalExit';
+                player.x = d.targetX;
+                player.y = d.targetY;
+                player.vx = 0;
+                player.vy = 0;
+                updateUI();
+                doorIntent = false;
+                spawnSafeTime = 0.8;
+                if (level < 10) advanceLevel();
+                else triggerWin();
+                return;
+            }
+        }
+
         function continueToLevel2() {
             startLevel2();
         }
@@ -1635,6 +1701,11 @@
             energy = maxEnergy;
             sprintStamina = maxSprintStamina;
             player.sprintLocked = false;
+            popQuizPending = null;
+            popQuizShownThisLevel = false;
+            isPopQuiz = false;
+            slackSeconds = 0;
+            activeSeconds = 0;
             player.x = 100;
             player.y = 300;
             document.getElementById('gameOverOverlay').classList.add('hidden');
@@ -1699,6 +1770,12 @@
         function closeHomeworkComplete() {
             document.getElementById('homeworkCompleteOverlay').classList.add('hidden');
             gameState = 'PLAYING';
+            if (isPopQuiz) {
+                isPopQuiz = false;
+                const pendingDoor = popQuizPending;
+                popQuizPending = null;
+                if (pendingDoor) completeLevelExit(pendingDoor);
+            }
             updateUI();
         }
 
@@ -1852,6 +1929,29 @@
                 document.getElementById('statusText').innerText = 'Door selected. Entering classroom...';
                 return;
             }
+            // Extra reporter feature: bribe a suspicious reporter with coins to keep them quiet.
+            if (currentRoom.reporters) {
+                const suspiciousReporter = currentRoom.reporters.find(reporter =>
+                    reporter.timer > 0.15 && !reporter.reported &&
+                    Math.abs((player.x + player.w / 2) - reporter.x) < reporter.range &&
+                    Math.abs((player.y + player.h / 2) - reporter.y) < 75
+                );
+                if (suspiciousReporter) {
+                    const bribeCost = 2;
+                    if (coins >= bribeCost) {
+                        coins -= bribeCost;
+                        suspiciousReporter.timer = 0;
+                        suspiciousReporter.bribeCooldown = 4;
+                        spawnBurst(suspiciousReporter.x, suspiciousReporter.y, '#ffd43b', 10);
+                        playTone(520, 0.08);
+                        document.getElementById('statusText').innerText = `🤐 Bribed the reporter quiet! -${bribeCost} coins`;
+                    } else {
+                        document.getElementById('statusText').innerText = "Need 2 coins to bribe them quiet!";
+                    }
+                    updateUI();
+                    return;
+                }
+            }
             if (currentRoom.desk && !homeworkDone[currentRoom.desk.subject]) {
                 const dist = Math.hypot((player.x + player.w / 2) - (currentRoom.desk.x + currentRoom.desk.w / 2), (player.y + player.h / 2) - (currentRoom.desk.y + currentRoom.desk.h / 2));
                 if (dist < 70) {
@@ -1910,7 +2010,80 @@
             modal.classList.remove('hidden');
         }
 
+        // Low-chance required extra assignment that can gate a level exit door.
+        // Reuses the homework modal's markup but is not tied to any classroom desk.
+        function openPopQuiz() {
+            if (gameState !== 'PLAYING') return;
+            gameState = 'HOMEWORK';
+            isPopQuiz = true;
+
+            const modal = document.getElementById('homeworkModal');
+            const container = document.getElementById('hwQuestionsContainer');
+            document.getElementById('hwTitle').innerText = '🚨 SURPRISE MATH TEST!';
+            document.getElementById('hwFeedback').innerText = "";
+            document.getElementById('hwHint').innerText = "POP QUIZ: You can't leave until you pass this. Big coin reward if you do!";
+
+            const pool = homeworkData.Math || Object.values(homeworkData)[0];
+            activeHomework = shuffleArray(pool)
+                .slice(0, Math.min(3, pool.length))
+                .map(item => ({ ...item, options: shuffleArray(item.options) }));
+
+            container.innerHTML = "";
+            activeHomework.forEach((item, idx) => {
+                const qBox = document.createElement('div');
+                qBox.className = 'quiz-question';
+                qBox.innerHTML = `
+                    <p class="quiz-prompt">${idx + 1}. ${item.q}</p>
+                    <div class="space-y-1">
+                        ${item.options.map(opt => `
+                            <label class="quiz-option">
+                                <input type="radio" name="q${idx}" value="${opt}">
+                                <span>${opt}</span>
+                            </label>
+                        `).join('')}
+                    </div>
+                `;
+                container.appendChild(qBox);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        function submitPopQuiz() {
+            const data = activeHomework;
+            let allCorrect = true;
+
+            data.forEach((item, idx) => {
+                const selected = document.querySelector(`input[name="q${idx}"]:checked`);
+                if (!selected || selected.value !== item.a) {
+                    allCorrect = false;
+                }
+            });
+
+            if (allCorrect) {
+                document.getElementById('homeworkModal').classList.add('hidden');
+                gameState = 'PLAYING';
+                activeHomework = [];
+                updateUI();
+                playTone(880, 0.12);
+                const reward = 15 + Math.floor(Math.random() * 11); // Lots of coins for passing the surprise test.
+                coins += reward;
+                spawnBurst(player.x + player.w / 2, player.y, '#ffd43b', 22);
+                document.getElementById('homeworkCompleteTitle').innerText = 'POP QUIZ PASSED!';
+                document.getElementById('homeworkCompleteReward').innerText = `+${reward} COINS (Surprise Test Bonus!)`;
+                document.getElementById('homeworkCompleteOverlay').classList.remove('hidden');
+                gameState = 'HOMEWORK_COMPLETE';
+                updateUI();
+            } else {
+                document.getElementById('hwFeedback').innerText = "❌ F- GRADE! The hall monitor isn't impressed. Try again!";
+            }
+        }
+
         function submitHomework() {
+            if (isPopQuiz) {
+                submitPopQuiz();
+                return;
+            }
             const currentSubject = rooms[currentRoomKey].desk.subject;
             const data = activeHomework;
             let allCorrect = true;
@@ -1971,6 +2144,32 @@
             updateShopUI();
         }
 
+        // Report-card style "how much did you slack off" rating for the end of a run,
+        // based on the ratio of time spent slacking vs. actively playing this run.
+        function getSlackRating() {
+            const total = slackSeconds + activeSeconds;
+            const pct = total > 0 ? (slackSeconds / total) * 100 : 0;
+            let stars, label;
+            if (pct < 10) { stars = 1; label = "TEACHER'S PET 🤓"; }
+            else if (pct < 25) { stars = 2; label = 'FOCUSED STUDENT 🎯'; }
+            else if (pct < 45) { stars = 3; label = 'BALANCED SLACKER ⚖️'; }
+            else if (pct < 70) { stars = 4; label = 'PROFESSIONAL SLACKER 🛋️'; }
+            else { stars = 5; label = 'CERTIFIED SLACK LEGEND 😴'; }
+            return { stars, label, pct: Math.round(pct) };
+        }
+
+        function showSlackRating() {
+            const box = document.getElementById('slackRatingBox');
+            if (slackSeconds + activeSeconds < 1) {
+                box.classList.add('hidden');
+                return;
+            }
+            const rating = getSlackRating();
+            document.getElementById('slackRatingStars').innerText = '⭐'.repeat(rating.stars) + '☆'.repeat(5 - rating.stars);
+            document.getElementById('slackRatingLabel').innerText = `${rating.label} — slacked ${rating.pct}% of the run`;
+            box.classList.remove('hidden');
+        }
+
         function triggerWin() {
             gameState = 'WIN';
             document.getElementById('gameOverTitle').innerText = level === 10 ? "🎉 LEVEL 10 CLEAR! YOU ESCAPED!" : `🎉 LEVEL ${level} CLEAR!`;
@@ -1980,6 +2179,7 @@
                 : "You escaped Westbridge Academy with " + coins + " coins in your pocket!";
             document.getElementById('nextLevelBtn').classList.toggle('hidden', level >= 10);
             document.getElementById('retryLevelBtn').classList.toggle('hidden', level >= 10);
+            showSlackRating();
             document.getElementById('gameOverOverlay').classList.remove('hidden');
         }
 
@@ -1990,6 +2190,7 @@
             document.getElementById('gameOverTitle').innerText = "DETENTION!";
             document.getElementById('gameOverTitle').className = "text-5xl font-black text-yellow-300 drop-shadow-[4px_4px_0px_#000] mb-4";
             document.getElementById('gameOverReason').innerText = reason;
+            showSlackRating();
             document.getElementById('gameOverOverlay').classList.remove('hidden');
         }
 
@@ -2060,10 +2261,15 @@
                 if (sprintStamina === 0) {
                     player.sprinting = false;
                     player.sprintLocked = true;
-                    document.getElementById('statusText').innerText = 'Sprint exhausted. Hold Slack while still to recover.';
+                    document.getElementById('statusText').innerText = 'Sprint exhausted. Ease up to recover.';
                 }
-            } else if (isSlacking && !movingInput && (player.grounded || onFloor) && sprintTime <= 0) {
-                sprintStamina = Math.min(maxSprintStamina, sprintStamina + 18 * dt);
+            } else if (sprintTime <= 0 && sprintStamina < maxSprintStamina) {
+                // Regen now happens any time you're not actively sprinting, instead of only
+                // while explicitly slacking and standing still (which used to regen slower
+                // than sprinting drained it, making stamina feel like it never came back).
+                // Standing still or slacking still tops it up the fastest.
+                const idleRegen = !movingInput && (player.grounded || onFloor);
+                sprintStamina = Math.min(maxSprintStamina, sprintStamina + (idleRegen ? 34 : 20) * dt);
                 if (player.sprintLocked && sprintStamina >= maxSprintStamina) {
                     sprintStamina = maxSprintStamina;
                     player.sprintLocked = false;
@@ -2165,38 +2371,17 @@
                     }
 
                     // Completing every class opens Level 2 instead of ending the run.
-                    if (d.targetRoom === 'Principal') {
-                        showLevel1Complete();
-                        doorIntent = false;
-                        changedRoom = true;
-                        return;
-                    }
-
-                    if (d.targetRoom === 'Level2Exit') {
-                        currentRoomKey = 'Level2Exit';
-                        player.x = d.targetX;
-                        player.y = d.targetY;
-                        player.vx = 0;
-                        player.vy = 0;
-                        updateUI();
-                        doorIntent = false;
-                        spawnSafeTime = 0.8;
-                        triggerWin();
-                        changedRoom = true;
-                        return;
-                    }
-
-                    if (d.targetRoom === 'FinalExit') {
-                        currentRoomKey = 'FinalExit';
-                        player.x = d.targetX;
-                        player.y = d.targetY;
-                        player.vx = 0;
-                        player.vy = 0;
-                        updateUI();
-                        doorIntent = false;
-                        spawnSafeTime = 0.8;
-                        if (level < 10) advanceLevel();
-                        else triggerWin();
+                    if (d.targetRoom === 'Principal' || d.targetRoom === 'Level2Exit' || d.targetRoom === 'FinalExit') {
+                        // Low-chance required "pop quiz" before you're allowed to leave the level.
+                        if (!popQuizShownThisLevel && Math.random() < 0.15) {
+                            popQuizShownThisLevel = true;
+                            popQuizPending = d;
+                            doorIntent = false;
+                            changedRoom = true;
+                            openPopQuiz();
+                            return;
+                        }
+                        completeLevelExit(d);
                         changedRoom = true;
                         return;
                     }
@@ -2247,9 +2432,11 @@
                     const reporterLimit = (room.width || canvas.width) - 55;
                     if (reporter.x < 35 || reporter.x > reporterLimit) reporter.dir *= -1;
 
+                    if (reporter.bribeCooldown > 0) reporter.bribeCooldown = Math.max(0, reporter.bribeCooldown - dt);
+
                     const nearby = Math.abs((player.x + player.w / 2) - reporter.x) < reporter.range &&
                         Math.abs((player.y + player.h / 2) - reporter.y) < 75;
-                    if (isSlacking && nearby && !player.canStealth) {
+                    if (isSlacking && nearby && !player.canStealth && !(reporter.bribeCooldown > 0)) {
                         reporter.timer += dt;
                         if (reporter.timer > 0.7 && !reporter.reported) {
                             reporter.reported = true;
@@ -2265,8 +2452,10 @@
             // Slacking Energy Recovery / Sleep Decay
             if (isSlacking) {
                 energy = Math.min(100, energy + 55 * dt);
+                slackSeconds += dt;
             } else {
                 energy = Math.max(0, energy - 1.25 * dt);
+                activeSeconds += dt;
             }
 
             if (energy <= 0) {
@@ -2744,7 +2933,8 @@
             ctx.save();
             ctx.lineWidth = 3;
             ctx.strokeStyle = '#000000';
-            ctx.fillStyle = reporter.timer > 0 ? '#ffcf56' : '#b9e6ff';
+            const isBribed = reporter.bribeCooldown > 0;
+            ctx.fillStyle = isBribed ? '#b9f6c5' : (reporter.timer > 0 ? '#ffcf56' : '#b9e6ff');
             ctx.beginPath();
             ctx.arc(reporter.x, headY, 14, 0, Math.PI * 2);
             ctx.fill();
@@ -2763,7 +2953,11 @@
             ctx.moveTo(reporter.x, reporter.y + 25 + bob);
             ctx.lineTo(reporter.x + 8, reporter.y + 43 + bob);
             ctx.stroke();
-            if (reporter.timer > 0) {
+            if (isBribed) {
+                ctx.fillStyle = '#16803c';
+                ctx.font = 'bold 11px "Comic Sans MS"';
+                ctx.fillText('🤐 shh...', reporter.x - 22, headY - 25);
+            } else if (reporter.timer > 0) {
                 ctx.fillStyle = '#d62828';
                 ctx.font = 'bold 11px "Comic Sans MS"';
                 ctx.fillText('REPORT!', reporter.x - 25, headY - 25);
