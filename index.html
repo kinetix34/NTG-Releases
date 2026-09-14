@@ -1,0 +1,2879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NTG Beta</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.cdnfonts.com/css/comic-sans-ms');
+
+        * {
+            font-family: 'Comic Sans MS', 'Comic Sans', cursive, sans-serif !important;
+            user-select: none;
+        }
+
+        body {
+            background-color: #c0c0c0;
+            background-image: 
+                linear-gradient(90deg, #d4d4d4 1px, transparent 1px),
+                linear-gradient(#d4d4d4 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .paint-border {
+            border: 4px solid #000;
+            box-shadow: 6px 6px 0px #808080, 12px 12px 0px #000;
+        }
+
+        .paint-button {
+            border: 3px solid #000;
+            background: #e0e0e0;
+            box-shadow: 4px 4px 0px #000;
+            transition: all 0.05s ease;
+        }
+
+        .paint-button:hover {
+            background: #ffffa0;
+        }
+
+        .paint-button:active {
+            box-shadow: 1px 1px 0px #000;
+            transform: translate(3px, 3px);
+        }
+
+        .paint-box {
+            background-color: #ffffff;
+            border: 4px solid #000000;
+            border-radius: 2px;
+        }
+
+        canvas {
+            image-rendering: pixelated;
+        }
+
+        #appWindow:fullscreen {
+            width: 100vw;
+            max-width: none;
+            height: 100vh;
+        }
+
+        .homework-panel {
+            max-height: calc(100% - 1rem);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+        }
+
+        .homework-questions {
+            min-height: 0;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .quiz-question {
+            border: 3px solid #000;
+            background: #fff4b8;
+            padding: 0.75rem;
+            box-shadow: 4px 4px 0 #000;
+        }
+
+        .quiz-prompt {
+            background: #fff;
+            border: 2px solid #000;
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 900;
+        }
+
+        .quiz-option {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            min-height: 2.25rem;
+            padding: 0.35rem 0.5rem;
+            border: 2px solid #000;
+            background: #fff;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .quiz-option:hover,
+        .quiz-option:has(input:checked) {
+            background: #b9f6c5;
+        }
+
+        .quiz-option input {
+            width: 1.1rem;
+            height: 1.1rem;
+            accent-color: #16803c;
+            flex: 0 0 auto;
+        }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .options-panel {
+            display: grid;
+            gap: 0.75rem;
+            text-align: left;
+        }
+
+        #startOverlay {
+            overflow-y: auto;
+        }
+
+        .options-panel label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            border: 2px solid #000;
+            background: #fff;
+            padding: 0.5rem;
+            font-weight: 900;
+        }
+
+        .options-panel select {
+            border: 2px solid #000;
+            background: #fff9a8;
+            padding: 0.25rem;
+            font-weight: 900;
+        }
+
+        .keybind-row button {
+            min-width: 6rem;
+            border: 2px solid #000;
+            background: #c8e7ff;
+            padding: 0.25rem 0.5rem;
+            font-weight: 900;
+        }
+
+        .mobile-controls {
+            touch-action: none;
+            user-select: none;
+            z-index: 20;
+        }
+
+        @media (pointer: coarse) {
+            html,
+            body {
+                width: 100%;
+                height: 100dvh;
+                min-height: 100dvh;
+                overflow: hidden;
+            }
+
+            body {
+                padding: 0.25rem;
+            }
+
+            .mobile-controls.md\:hidden {
+                display: flex;
+            }
+
+            #appWindow {
+                width: 100%;
+                height: 100dvh;
+                max-height: 100dvh;
+                max-width: none;
+            }
+
+            #appWindow > .relative {
+                flex: 1 1 0%;
+                min-height: 0 !important;
+            }
+
+            #appWindow > .relative > #gameCanvas {
+                flex: 0 1 auto;
+            }
+
+            #gameCanvas {
+                width: min(100%, calc((100dvh - 8.5rem) * 1.7778)) !important;
+                height: auto !important;
+                max-height: calc(100dvh - 8.5rem) !important;
+                object-fit: contain;
+            }
+
+            #homeworkModal {
+                position: fixed;
+                inset: 0;
+                z-index: 40;
+                align-items: stretch;
+                justify-content: stretch;
+                padding: max(0.35rem, 1.5dvh) max(0.5rem, 1.5vw);
+            }
+
+            .homework-panel {
+                width: 100%;
+                max-width: none;
+                max-height: calc(100dvh - 1dvh);
+                height: 100%;
+                padding: max(0.45rem, 1dvh) max(0.6rem, 1.2vw);
+            }
+
+            .homework-panel h2 {
+                font-size: clamp(1.05rem, 3.2dvh, 1.6rem);
+            }
+
+            .homework-panel .quiz-prompt,
+            .homework-panel .quiz-option {
+                font-size: clamp(0.7rem, 1.9dvh, 0.95rem);
+            }
+
+            .homework-questions {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: max(0.35rem, 1dvh);
+            }
+
+            .quiz-question {
+                padding: max(0.35rem, 0.8dvh);
+                box-shadow: 2px 2px 0 #000;
+            }
+
+            .quiz-prompt {
+                padding: 0.3rem;
+                margin-bottom: 0.3rem;
+            }
+
+            .quiz-option {
+                min-height: max(2rem, 5dvh);
+                padding: 0.25rem 0.35rem;
+                gap: 0.35rem;
+            }
+
+            .quiz-option input {
+                width: 1.25rem;
+                height: 1.25rem;
+            }
+
+            #hwQuestionsContainer {
+                overflow-y: auto;
+                overscroll-behavior: contain;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        .mobile-controls button {
+            width: clamp(2.75rem, 10dvh, 4rem);
+            height: clamp(2.75rem, 10dvh, 4rem);
+            border: 3px solid #000;
+            background: #fff36b;
+            box-shadow: 3px 3px 0 #000;
+            font-weight: 900;
+            touch-action: none;
+        }
+
+        .mobile-action-grid {
+            display: grid;
+            grid-template-columns: repeat(2, clamp(2.75rem, 10dvh, 4rem));
+            gap: clamp(0.3rem, 1.2dvh, 0.6rem);
+        }
+
+        .joystick {
+            width: clamp(6rem, 24dvh, 10rem);
+            height: clamp(6rem, 24dvh, 10rem);
+            border: 4px solid #000;
+            border-radius: 50%;
+            background: rgba(255, 243, 107, 0.82);
+            box-shadow: 4px 4px 0 #000;
+            touch-action: none;
+            position: relative;
+        }
+
+        .joystick-knob {
+            width: clamp(2.5rem, 9dvh, 4rem);
+            height: clamp(2.5rem, 9dvh, 4rem);
+            border: 3px solid #000;
+            border-radius: 50%;
+            background: #c8e7ff;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+        }
+
+        @media (pointer: coarse) and (max-height: 600px) {
+            body {
+                padding: 0.25rem;
+                overflow: hidden;
+            }
+
+            .mobile-controls {
+                bottom: 0.5rem;
+                left: 0.5rem;
+                right: 0.5rem;
+            }
+
+            .mobile-controls button {
+                width: clamp(2.7rem, 11dvh, 3.6rem);
+                height: clamp(2.7rem, 11dvh, 3.6rem);
+                font-size: 0.65rem;
+            }
+
+            .mobile-action-grid {
+                grid-template-columns: repeat(2, clamp(2.7rem, 11dvh, 3.6rem));
+                gap: 0.35rem;
+            }
+
+            .joystick {
+                width: clamp(5.5rem, 23dvh, 8rem);
+                height: clamp(5.5rem, 23dvh, 8rem);
+            }
+
+            .joystick-knob {
+                width: clamp(2.25rem, 9dvh, 3.2rem);
+                height: clamp(2.25rem, 9dvh, 3.2rem);
+            }
+        }
+
+        @media (max-width: 900px) and (orientation: landscape) {
+            html,
+            body {
+                width: 100%;
+                height: 100dvh;
+                min-height: 100dvh;
+                overflow: hidden;
+            }
+
+            body {
+                padding: 0.25rem;
+            }
+
+            #appWindow {
+                width: 100%;
+                height: 100dvh;
+                max-width: none;
+                max-height: 100dvh;
+            }
+
+            #appWindow > .relative {
+                flex: 1 1 0%;
+                min-height: 0 !important;
+                overflow: hidden;
+            }
+
+            #gameCanvas {
+                width: min(100%, calc((100dvh - 8.5rem) * 1.7778)) !important;
+                height: auto !important;
+                max-height: calc(100dvh - 8.5rem) !important;
+            }
+
+            #desktopControlsBar,
+            #statusBar {
+                display: none;
+            }
+
+            .mobile-controls.md\:hidden {
+                display: flex;
+            }
+
+            .mobile-controls button {
+                width: clamp(2.7rem, 11dvh, 3.6rem);
+                height: clamp(2.7rem, 11dvh, 3.6rem);
+                font-size: 0.65rem;
+            }
+
+            .mobile-action-grid {
+                grid-template-columns: repeat(2, clamp(2.7rem, 11dvh, 3.6rem));
+                gap: 0.35rem;
+            }
+
+            .joystick {
+                width: clamp(5.5rem, 23dvh, 8rem);
+                height: clamp(5.5rem, 23dvh, 8rem);
+            }
+
+            .joystick-knob {
+                width: clamp(2.25rem, 9dvh, 3.2rem);
+                height: clamp(2.25rem, 9dvh, 3.2rem);
+            }
+
+            #homeworkModal {
+                position: fixed;
+                inset: 0;
+                z-index: 40;
+                align-items: stretch;
+                justify-content: stretch;
+                padding: 0.35rem 0.5rem;
+            }
+
+            .homework-panel {
+                width: 100%;
+                max-width: none;
+                height: 100%;
+                max-height: calc(100dvh - 1dvh);
+                padding: 0.45rem 0.6rem;
+            }
+
+            .homework-panel h2 {
+                font-size: clamp(1.05rem, 3.2dvh, 1.6rem);
+            }
+
+            .homework-questions {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+                gap: 0.35rem;
+                overflow-y: auto;
+                overscroll-behavior: contain;
+            }
+
+            .quiz-question {
+                padding: 0.35rem;
+                box-shadow: 2px 2px 0 #000;
+            }
+
+            .quiz-prompt,
+            .quiz-option {
+                font-size: clamp(0.7rem, 1.9dvh, 0.95rem);
+            }
+
+            .quiz-prompt {
+                padding: 0.3rem;
+                margin-bottom: 0.3rem;
+            }
+
+            .quiz-option {
+                min-height: max(2rem, 5dvh);
+                padding: 0.25rem 0.35rem;
+                gap: 0.35rem;
+            }
+
+            .quiz-option input {
+                width: 1.25rem;
+                height: 1.25rem;
+            }
+        }
+
+        #orientationPrompt {
+            display: none;
+        }
+
+        .pause-panel,
+        .changelog-panel {
+            max-height: calc(100% - 2rem);
+            overflow-y: auto;
+        }
+
+        @media (max-width: 767px) and (orientation: portrait) {
+            #orientationPrompt {
+                display: flex;
+            }
+
+            .mobile-controls {
+                display: none;
+            }
+        }
+
+        #startOverlay:not(.hidden) ~ .mobile-controls {
+            display: none;
+        }
+
+        body[data-theme="ocean"] { background-color: #b8e5f2; }
+        body[data-theme="sunset"] { background-color: #f3c0a6; }
+        body[data-theme="mono"] { background-color: #c8c8c8; filter: saturate(0.35); }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4 text-black">
+
+    <div id="appWindow" class="w-full max-w-4xl bg-[#c0c0c0] paint-border flex flex-col overflow-hidden">
+        
+        <!-- Window Title Bar -->
+        <div class="bg-[#000080] text-white px-3 py-1 flex justify-between items-center font-bold text-sm sm:text-base border-b-4 border-black">
+            <div class="flex items-center gap-2">
+                <span class="inline-block w-4 h-4 bg-yellow-400 border border-black text-center text-xs text-black leading-none">🎨</span>
+                <span>NTG Beta.game</span>
+            </div>
+            <div class="flex gap-1">
+                <button onclick="toggleEasterEgg()" title="Secret file" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ secret_notes.txt ]</button>
+                <button onclick="toggleChangelog()" title="View changelog" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ CHANGELOG ]</button>
+                <button onclick="toggleFullscreen()" title="Toggle fullscreen" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ FULL ]</button>
+                <div class="w-4 h-4 bg-[#c0c0c0] border border-black text-black flex items-center justify-center text-xs">_</div>
+                <div class="w-4 h-4 bg-[#c0c0c0] border border-black text-black flex items-center justify-center text-xs">X</div>
+            </div>
+        </div>
+
+        <!-- MS Paint Menu Header -->
+        <div class="bg-[#e0e0e0] border-b-2 border-black px-2 py-1 text-xs flex gap-4 text-black font-bold">
+            <span class="hover:bg-blue-200 cursor-pointer px-1">File</span>
+            <span class="hover:bg-blue-200 cursor-pointer px-1">Edit</span>
+            <span class="hover:bg-blue-200 cursor-pointer px-1">View</span>
+            <span class="hover:bg-blue-200 cursor-pointer px-1" onclick="showControls()">Controls</span>
+            <span class="hover:bg-blue-200 cursor-pointer px-1" onclick="showHelp()">Help</span>
+        </div>
+
+        <!-- Main Canvas Container -->
+        <div class="relative p-2 sm:p-4 bg-[#808080] flex justify-center items-center flex-grow min-h-[450px]">
+            
+            <canvas id="gameCanvas" width="800" height="450" class="paint-box w-full max-w-[800px] h-auto bg-white shadow-inner cursor-crosshair"></canvas>
+
+            <!-- START OVERLAY -->
+            <div id="startOverlay" class="absolute inset-0 bg-yellow-100/90 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center">
+                <h1 class="text-5xl sm:text-7xl font-extrabold tracking-widest text-red-600 drop-shadow-[4px_4px_0px_#000] mb-2 transform -rotate-2">
+                    NTG
+                </h1>
+                <p class="text-xl font-bold bg-white px-3 py-1 border-2 border-black shadow-[3px_3px_0px_#000] mb-6">
+                    Beta - A Metroidvania-style school adventure!
+                </p>
+
+                <div class="bg-white p-4 border-4 border-black max-w-md w-full mb-6 shadow-[6px_6px_0px_#000] text-left text-sm space-y-2">
+                    <p class="font-bold text-red-600 border-b-2 border-dashed border-black pb-1">METROIDVANIA RULES:</p>
+                    <p>🏃 <strong>Explore:</strong> Move through interconnected classrooms & hallways.</p>
+                    <p>📚 <strong>Worksheets:</strong> Every desk draws a fresh random quiz from a larger question pool!</p>
+                    <p>😴 <strong>Energy & Stealth:</strong> Slack off to regain awake energy, but don't get spotted by roaming teachers while doing it!</p>
+                    <p>🔑 <strong>Goal:</strong> Complete 4 core classes, explore bonus rooms, collect upgrades, then unlock the Principal Office and ESCAPE!</p>
+                </div>
+
+                <button onclick="startGame()" class="paint-button text-2xl font-extrabold px-8 py-4 bg-green-400 text-black hover:bg-green-300 transform hover:scale-105">
+                    ▶️ ENTER SCHOOL!
+                </button>
+                <button onclick="toggleOptions()" class="paint-button mt-3 px-5 py-2 bg-blue-300 font-black">⚙ OPTIONS</button>
+                <div id="optionsPanel" class="hidden bg-white border-4 border-black p-4 mt-3 w-full max-w-md shadow-[5px_5px_0px_#000] options-panel">
+                    <label>Resolution
+                        <select id="resolutionOption" onchange="applyOptions()">
+                            <option value="640">640 x 360</option>
+                            <option value="800" selected>800 x 450</option>
+                            <option value="960">960 x 540</option>
+                        </select>
+                    </label>
+                    <label>Theme
+                        <select id="themeOption" onchange="applyOptions()">
+                            <option value="classic" selected>Classic Paint</option>
+                            <option value="ocean">Ocean Blue</option>
+                            <option value="sunset">Sunset Paper</option>
+                            <option value="mono">Mono CRT</option>
+                        </select>
+                    </label>
+                    <label>Max FPS
+                        <select id="fpsOption" onchange="applyOptions()">
+                            <option value="30">30 FPS</option>
+                            <option value="60" selected>60 FPS</option>
+                            <option value="120">120 FPS</option>
+                        </select>
+                    </label>
+                    <p id="optionsStatus" class="text-xs font-bold text-green-700">Options applied.</p>
+                    <div class="border-t-2 border-black pt-2 space-y-1">
+                        <p class="font-black text-sm">KEYBINDS: press a button, then press any key</p>
+                        <div class="keybind-row flex justify-between items-center"><span>Move Left</span><button id="bind-left" onclick="beginKeybindCapture('left')">ArrowLeft</button></div>
+                        <div class="keybind-row flex justify-between items-center"><span>Move Right</span><button id="bind-right" onclick="beginKeybindCapture('right')">ArrowRight</button></div>
+                        <div class="keybind-row flex justify-between items-center"><span>Jump</span><button id="bind-jump" onclick="beginKeybindCapture('jump')">W</button></div>
+                        <div class="keybind-row flex justify-between items-center"><span>Interact</span><button id="bind-interact" onclick="beginKeybindCapture('interact')">E</button></div>
+                        <div class="keybind-row flex justify-between items-center"><span>Slack</span><button id="bind-slack" onclick="beginKeybindCapture('slack')">Space</button></div>
+                        <div class="keybind-row flex justify-between items-center"><span>Food</span><button id="bind-food" onclick="beginKeybindCapture('food')">F</button></div>
+                        <div class="keybind-row flex justify-between items-center"><span>Hall Pass</span><button id="bind-pass" onclick="beginKeybindCapture('pass')">H</button></div>
+                        <div class="keybind-row flex justify-between items-center"><span>Sprint</span><button id="bind-sprint" onclick="beginKeybindCapture('sprint')">Shift Left</button></div>
+                        <div class="keybind-row flex justify-between items-center"><span>Dash</span><button id="bind-dash" onclick="beginKeybindCapture('dash')">Q</button></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mobile-controls md:hidden absolute bottom-3 left-3 right-3 flex justify-between items-end pointer-events-none">
+                <div class="pointer-events-auto">
+                    <div id="joystick" class="joystick" aria-label="Movement joystick">
+                        <div id="joystickKnob" class="joystick-knob"></div>
+                    </div>
+                </div>
+                <div class="mobile-action-grid pointer-events-auto">
+                    <button onpointerdown="mobileAction('jump')">JUMP</button>
+                    <button onpointerdown="mobileAction('interact')">USE</button>
+                    <button onpointerdown="mobileAction('slack')">SLACK</button>
+                    <button onpointerdown="mobileAction('sprint')" onpointerup="mobileAction('sprintStop')" onpointercancel="mobileAction('sprintStop')">RUN</button>
+                    <button onpointerdown="mobileAction('dash')">DASH</button>
+                </div>
+            </div>
+
+            <div id="orientationPrompt" class="fixed inset-0 z-50 bg-black/90 text-white items-center justify-center p-6 text-center">
+                <div class="border-4 border-white bg-blue-950 p-6 max-w-sm shadow-[8px_8px_0px_#fff]">
+                    <div class="text-5xl mb-3">↔</div>
+                    <h2 class="text-2xl font-black mb-2">TURN YOUR DEVICE SIDEWAYS</h2>
+                    <p class="font-bold">NTG plays best in landscape mode.</p>
+                </div>
+            </div>
+
+            <div id="pauseOverlay" class="hidden absolute inset-0 z-30 bg-black/70 flex items-center justify-center p-4 text-center">
+                <div class="pause-panel bg-yellow-100 text-black border-4 border-black p-5 w-full max-w-md shadow-[8px_8px_0_#fff]">
+                    <div class="text-4xl mb-2" aria-hidden="true">⏸</div>
+                    <h2 class="text-3xl font-black mb-2">GAME PAUSED</h2>
+                    <p class="font-bold mb-4">The school is waiting.</p>
+                    <div class="flex flex-wrap justify-center gap-3">
+                        <button onclick="togglePause()" class="paint-button px-5 py-3 bg-green-400 font-black"><span aria-hidden="true">▶</span> RESUME</button>
+                        <button onclick="returnToMenu()" class="paint-button px-5 py-3 bg-blue-300 font-black">MENU</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="changelogModal" class="hidden absolute inset-0 z-40 bg-black/70 flex items-center justify-center p-4">
+                <div class="changelog-panel bg-white border-4 border-black p-4 w-full max-w-2xl shadow-[8px_8px_0_#ffff00] text-left">
+                    <div class="flex justify-between items-center border-b-4 border-black pb-2 mb-3">
+                        <h2 class="text-2xl font-black">NTG CHANGELOG</h2>
+                        <button onclick="toggleChangelog()" class="paint-button px-3 py-1 bg-red-300 font-black">X</button>
+                    </div>
+                    <div class="space-y-2 text-sm font-bold">
+                        <p><strong>Mobile:</strong> Responsive landscape controls, joystick dead zone, pointer-safe input, and a full-screen homework layout.</p>
+                        <p><strong>Movement:</strong> Independent sprint stamina, recovery, stronger dash, animated player trails, and dynamic energy colors.</p>
+                        <p><strong>World:</strong> Levels 1-10, longer side-scrolling wings, randomized classes, teachers, reporters, and classroom decor.</p>
+                        <p><strong>Flow:</strong> Current-level retries, explicit door interaction, level completion navigation, and pause/menu controls.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HOMEWORK MODAL OVERLAY -->
+            <div id="homeworkModal" class="hidden absolute inset-0 bg-black/60 flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+                <div class="homework-panel bg-yellow-50 border-4 border-black p-3 sm:p-5 w-full max-w-2xl shadow-[10px_10px_0px_#000] relative">
+                    <div class="flex justify-between items-start gap-2 border-b-4 border-black pb-2 mb-3 flex-shrink-0">
+                        <div>
+                            <h2 class="text-2xl font-black text-blue-800" id="hwTitle">MATH HOMEWORK</h2>
+                            <p id="hwHint" class="text-xs font-bold text-black bg-yellow-200 border-2 border-black px-2 py-1 mt-2">WORKSHEET: Pick one bright answer for every question.</p>
+                        </div>
+                        <span class="text-xs font-bold bg-red-200 border border-black px-2 py-1">GRADE: Pre-K</span>
+                    </div>
+
+                    <div id="hwQuestionsContainer" class="homework-questions space-y-2 mb-3 text-left"></div>
+
+                    <div class="flex justify-between items-center gap-2 flex-wrap flex-shrink-0">
+                        <p id="hwFeedback" class="text-sm font-bold text-red-600 min-h-[20px]"></p>
+                        <button onclick="submitHomework()" class="paint-button px-6 py-2 bg-blue-400 font-bold hover:bg-blue-300">
+                            SUBMIT WORK
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="levelCompleteOverlay" class="hidden absolute inset-0 bg-blue-950/90 flex flex-col items-center justify-center p-5 text-white text-center">
+                <div class="bg-yellow-200 text-black border-4 border-black p-5 max-w-lg shadow-[8px_8px_0px_#000]">
+                    <p class="font-black text-red-600 text-sm">LEVEL 1 COMPLETE</p>
+                    <h2 class="text-4xl font-black mb-3">YOU PASSED!</h2>
+                    <p class="font-bold mb-4">The old school is behind you. Westbridge Academy is next.</p>
+                    <p class="text-sm border-2 border-black bg-white p-2 mb-4">Coins carry over. Visit the shop before facing the new school.</p>
+                    <div class="flex flex-wrap justify-center gap-3">
+                        <button onclick="continueToLevel2()" class="paint-button text-xl font-black px-6 py-3 bg-green-400">ENTER WESTBRIDGE</button>
+                        <button onclick="returnToMenu()" class="paint-button text-xl font-black px-6 py-3 bg-blue-300">MENU</button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="shopModal" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center p-3">
+                <div class="bg-yellow-50 border-4 border-black p-4 w-full max-w-2xl shadow-[8px_8px_0px_#000]">
+                    <div class="flex justify-between items-center border-b-4 border-black pb-2 mb-3">
+                        <h2 class="text-2xl font-black">WESTBRIDGE SHOP</h2>
+                        <button onclick="closeShop()" class="paint-button px-3 py-1 bg-red-300 font-black">X</button>
+                    </div>
+                    <p id="shopMessage" class="font-bold text-sm mb-3 min-h-[20px]">Spend coins on useful supplies.</p>
+                    <div class="shop-grid">
+                        <button onclick="buyShopItem('food')" class="paint-button p-3 text-left bg-green-300 font-bold">🍎 Food<br><span class="text-xs">+35 energy, press F to eat</span><br>3 coins</button>
+                        <button onclick="buyShopItem('pass')" class="paint-button p-3 text-left bg-blue-300 font-bold">🎫 Hall Pass<br><span class="text-xs">60-second sprint, press H</span><br>5 coins</button>
+                        <button onclick="buyShopItem('random')" class="paint-button p-3 text-left bg-purple-300 font-bold">❔ Mystery Item<br><span class="text-xs">Random Level 2 helper</span><br>4 coins</button>
+                    </div>
+                    <div class="mt-4 border-2 border-black bg-white p-2 font-mono text-sm">Coins: <span id="shopCoins">0</span> | Food: <span id="shopFood">0</span> | Passes: <span id="shopPasses">0</span> | Helpers: <span id="shopHelpers">0</span></div>
+                </div>
+            </div>
+
+            <div id="homeworkCompleteOverlay" class="hidden absolute inset-0 bg-green-950/90 flex items-center justify-center p-4 text-center">
+                <div class="bg-yellow-200 text-black border-4 border-black p-5 w-full max-w-md shadow-[8px_8px_0px_#000]">
+                    <p class="text-red-600 font-black text-sm">WORKSHEET COMPLETE</p>
+                    <h2 id="homeworkCompleteTitle" class="text-4xl font-black mb-2">NICE WORK!</h2>
+                    <p id="homeworkCompleteReward" class="text-xl font-black bg-white border-2 border-black p-3 mb-4">+0 COINS</p>
+                    <button onclick="closeHomeworkComplete()" class="paint-button px-6 py-3 bg-green-400 font-black">BACK TO CLASS</button>
+                </div>
+            </div>
+
+            <!-- GAMEOVER OVERLAY -->
+            <div id="gameOverOverlay" class="hidden absolute inset-0 bg-red-900/90 flex flex-col items-center justify-center p-6 text-white text-center">
+                <h2 id="gameOverTitle" class="text-5xl font-black text-yellow-300 drop-shadow-[4px_4px_0px_#000] mb-4">DETENTION!</h2>
+                <p id="gameOverReason" class="text-xl mb-6 bg-black px-4 py-2 border-2 border-white">The teacher caught you!</p>
+                <div class="flex flex-wrap justify-center gap-3">
+                    <button id="retryLevelBtn" onclick="restartGame()" class="paint-button text-xl font-bold px-6 py-3 bg-yellow-400 text-black hover:bg-yellow-300">
+                        🔄 RESTART LEVEL
+                    </button>
+                    <button id="nextLevelBtn" onclick="continueAfterWin()" class="hidden paint-button text-xl font-bold px-6 py-3 bg-green-400 text-black hover:bg-green-300">
+                        ▶ NEXT LEVEL
+                    </button>
+                    <button onclick="returnToMenu()" class="paint-button text-xl font-bold px-6 py-3 bg-blue-300 text-black hover:bg-blue-200">
+                        MENU
+                    </button>
+                </div>
+            </div>
+
+            <!-- SECRET TEXT FILE OVERLAY -->
+            <div id="secretModal" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center p-4">
+                <div class="bg-white border-4 border-black p-4 w-full max-w-lg shadow-[8px_8px_0px_#ffff00] font-mono text-sm">
+                    <div class="bg-blue-900 text-white p-1 mb-3 font-bold flex justify-between">
+                        <span>secret_notes.txt - Notepad</span>
+                        <button onclick="toggleEasterEgg()" class="text-white px-2 hover:bg-red-600">X</button>
+                    </div>
+                    <div class="bg-gray-100 p-3 border-2 border-gray-400 text-left h-48 overflow-y-auto space-y-2 text-xs">
+                        <p class="text-green-700 font-bold">> METROIDVANIA SECRETS:</p>
+                        <p>- Math homework unlocks DOUBLE JUMP sneakers.</p>
+                        <p>- ELA homework unlocks STEALTH HOOD to hide from hall monitors.</p>
+                        <p>- Science homework unlocks DASH sneakers.</p>
+                        <p>- Gym homework gives MASTER KEYCARD to open the Principal's Door.</p>
+                    </div>
+                    <div class="mt-4 text-right">
+                        <button onclick="toggleEasterEgg()" class="paint-button px-4 py-1 text-sm bg-gray-300">Close File</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Controls Bar -->
+        <div id="desktopControlsBar" class="bg-[#c0c0c0] p-3 border-t-4 border-black flex flex-wrap justify-between items-center gap-2">
+            <div class="flex items-center gap-2 text-xs font-bold">
+                <span>Location: <span id="roomLabel" class="bg-white px-2 py-1 border border-black">Math Class</span></span>
+                <span>Abilities: <span id="abilityLabel" class="bg-yellow-200 px-2 py-1 border border-black">None</span></span>
+            </div>
+
+            <div class="flex gap-2">
+                <button id="slackBtn" onmousedown="setSlacking(true)" onmouseup="setSlacking(false)" onmouseleave="setSlacking(false)"
+                        ontouchstart="setSlacking(true)" ontouchend="setSlacking(false)"
+                        class="paint-button px-4 py-2 font-black bg-red-400 text-black hover:bg-red-300 active:bg-red-500 text-xs sm:text-sm">
+                    🤪 SLACK OFF (Hold Space)
+                </button>
+                <button onclick="interactObject()" id="interactBtn" class="paint-button px-3 py-2 font-bold bg-blue-300 text-black text-xs sm:text-sm">
+                    📝 Interact / Work (E)
+                </button>
+                <button onclick="togglePause()" id="pauseBtn" class="paint-button px-3 py-2 font-bold bg-yellow-300 text-black text-xs sm:text-sm">
+                    <span aria-hidden="true">⏸</span> Pause (P)
+                </button>
+                <button onclick="toggleSound()" id="soundBtn" class="paint-button px-3 py-2 font-bold bg-gray-300 text-black text-xs sm:text-sm">
+                    Sound: ON (M)
+                </button>
+                <button onclick="openShop()" id="shopBtn" class="paint-button px-3 py-2 font-bold bg-purple-300 text-black text-xs sm:text-sm">
+                    Shop
+                </button>
+            </div>
+        </div>
+
+        <!-- Status bar -->
+        <div id="statusBar" class="bg-[#e0e0e0] border-t-2 border-black p-1 text-xs flex justify-between items-center text-gray-700 font-mono">
+            <span>Tool: Player Pencil Stickman</span>
+            <span id="statusText">Status: Exploring School...</span>
+            <span>Canvas: 800x450</span>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+
+        let gameState = 'MENU';
+        let energy = 100;
+        const maxEnergy = 100;
+        let sprintStamina = 100;
+        const maxSprintStamina = 100;
+        let isSlacking = false;
+        let lastTimestamp = 0;
+        let isPaused = false;
+        let soundEnabled = true;
+        let audioContext = null;
+        let checkpoint = { room: 'Math', x: 100, y: 300 };
+        let doorCooldown = 0;
+        let gameTime = 0;
+        let level = 1;
+        let coins = 0;
+        let inventory = { food: 0, hallPasses: 0, helpers: [] };
+        let sprintTime = 0;
+        let roomCoinsInitialized = false;
+        let particles = [];
+        let roomBanner = { text: '', time: 0 };
+        let screenShake = 0;
+        let spawnSafeTime = 0;
+        let combo = 0;
+        let maxFps = 60;
+        let frameInterval = 1000 / maxFps;
+        let lastFrameTime = 0;
+        let capturingKeybind = null;
+        const optionsStorageKey = 'ntg-options';
+        const keybinds = {
+            left: 'ArrowLeft',
+            right: 'ArrowRight',
+            jump: 'KeyW',
+            interact: 'KeyE',
+            slack: 'Space',
+            food: 'KeyF',
+            pass: 'KeyH',
+            dash: 'KeyQ',
+            sprint: 'ShiftLeft'
+        };
+
+        // Player Metroidvania Physics & Abilities State
+        const player = {
+            x: 100,
+            y: 300,
+            vx: 0,
+            vy: 0,
+            w: 24,
+            h: 40,
+            grounded: false,
+            doubleJumpsLeft: 0,
+            canDoubleJump: false,
+            canStealth: false,
+            canDash: false,
+            hasMasterKey: false,
+            dashCooldown: 0,
+            dashTime: 0,
+            dashDirection: 1,
+            sprinting: false,
+            sprintLocked: false,
+            sprintBoost: false
+        };
+
+        let keys = {};
+
+        // Subject Homework Solved Flags
+        let homeworkDone = { Math: false, ELA: false, Science: false, Gym: false, Art: false, Computer: false, Cafeteria: false, Music: false, History: false, Chemistry: false, MusicClass: false };
+        let activeHomework = [];
+        let activeLevelSubjects = ['Math', 'ELA', 'Science', 'Gym'];
+        let levelRunSeed = Math.floor(Math.random() * 1000000);
+        let doorIntent = false;
+        let joystickPointerId = null;
+
+        // Map Rooms (Metroidvania layout)
+        let currentRoomKey = 'Math';
+        let cameraX = 0;
+        const rooms = {
+            Math: {
+                title: 'Math Classroom', color: '#fff9e6',
+                doors: [{ x: 740, y: 280, w: 50, h: 100, targetRoom: 'HallwayCentral', targetX: 70, targetY: 300 }],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 250, y: 280, w: 150, h: 20 },
+                    { x: 450, y: 200, w: 150, h: 20 }
+                ],
+                desk: { x: 500, y: 150, w: 60, h: 50, subject: 'Math' },
+                teacher: { x: 300, y: 330, range: 100, dir: 1, timer: 0, state: 'WRITING' }
+            },
+            HallwayCentral: {
+                title: 'Central Hallway Hub', color: '#f0f0f0', width: 1600,
+                doors: [
+                    { x: 40, y: 280, w: 40, h: 100, targetRoom: 'Math', targetX: 700, targetY: 300 },
+                    { x: 1460, y: 280, w: 40, h: 100, targetRoom: 'ELA', targetX: 70, targetY: 300 },
+                    { x: 380, y: 100, w: 80, h: 80, targetRoom: 'Science', targetX: 400, targetY: 300, reqAbility: 'canDoubleJump', label: 'High Vent (Requires Double Jump)' },
+                    { x: 680, y: 280, w: 70, h: 100, targetRoom: 'Gym', targetX: 70, targetY: 300, reqAbility: 'canDash', label: 'Gym Lock (Requires Dash)' },
+                    { x: 1040, y: 110, w: 90, h: 70, targetRoom: 'Art', targetX: 70, targetY: 300, reqAbility: 'canStealth', label: 'Quiet Art Wing (Requires Stealth)' },
+                    { x: 180, y: 110, w: 90, h: 70, targetRoom: 'Computer', targetX: 70, targetY: 300, reqAbility: 'canDoubleJump', label: 'Computer Lab (Requires Double Jump)' },
+                    { x: 1240, y: 260, w: 90, h: 80, targetRoom: 'Cafeteria', targetX: 70, targetY: 300, label: 'Cafeteria' },
+                    { x: 790, y: 20, w: 60, h: 60, targetRoom: 'Principal', targetX: 400, targetY: 320, reqAbility: 'hasMasterKey', reqCore: true, label: 'Principal Office (Requires all classes)' }
+                ],
+                platforms: [
+                    { x: 0, y: 380, w: 1600, h: 70 },
+                    { x: 300, y: 260, w: 200, h: 20 },
+                    { x: 720, y: 180, w: 160, h: 20 },
+                    { x: 80, y: 220, w: 120, h: 20 },
+                    { x: 1080, y: 210, w: 140, h: 20 }
+                ],
+                desk: null,
+                teacher: { x: 800, y: 330, range: 180, dir: -1, timer: 0, state: 'WRITING' },
+                reporters: [{ x: 560, startX: 560, y: 330, dir: 1, speed: 60, range: 75, timer: 0, reported: false }, { x: 1180, startX: 1180, y: 330, dir: -1, speed: 55, range: 75, timer: 0, reported: false }]
+            },
+            ELA: {
+                title: 'ELA Library', color: '#e6f2ff',
+                doors: [{ x: 20, y: 280, w: 40, h: 100, targetRoom: 'HallwayCentral', targetX: 700, targetY: 300 }],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 150, y: 270, w: 180, h: 20 },
+                    { x: 400, y: 210, w: 200, h: 20 }
+                ],
+                desk: { x: 480, y: 160, w: 60, h: 50, subject: 'ELA' },
+                teacher: { x: 200, y: 330, range: 120, dir: 1, timer: 0, state: 'WRITING' }
+            },
+            Science: {
+                title: 'Science Lab', color: '#e6ffe6',
+                doors: [{ x: 400, y: 300, w: 60, h: 80, targetRoom: 'HallwayCentral', targetX: 400, targetY: 200 }],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 100, y: 280, w: 120, h: 20 },
+                    { x: 580, y: 280, w: 120, h: 20 },
+                    { x: 320, y: 200, w: 160, h: 20 }
+                ],
+                desk: { x: 370, y: 150, w: 60, h: 50, subject: 'Science' },
+                teacher: { x: 600, y: 330, range: 100, dir: -1, timer: 0, state: 'WRITING' }
+            },
+            Gym: {
+                title: 'Gymnasium', color: '#fff0f0',
+                doors: [{ x: 20, y: 280, w: 40, h: 100, targetRoom: 'HallwayCentral', targetX: 300, targetY: 300 }],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 180, y: 260, w: 440, h: 20 },
+                    { x: 310, y: 170, w: 180, h: 20 }
+                ],
+                desk: { x: 370, y: 110, w: 60, h: 50, subject: 'Gym' },
+                teacher: null, balls: []
+            },
+            Art: {
+                title: 'Art Room', color: '#ffe6f7',
+                doors: [{ x: 20, y: 280, w: 40, h: 100, targetRoom: 'HallwayCentral', targetX: 550, targetY: 220 }],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 140, y: 290, w: 160, h: 20 },
+                    { x: 420, y: 240, w: 180, h: 20 },
+                    { x: 280, y: 150, w: 140, h: 20 }
+                ],
+                desk: { x: 320, y: 100, w: 60, h: 50, subject: 'Art' },
+                teacher: { x: 650, y: 330, range: 130, dir: -1, timer: 0, state: 'WRITING' }
+            },
+            Computer: {
+                title: 'Computer Lab', color: '#e8e6ff',
+                doors: [{ x: 20, y: 280, w: 40, h: 100, targetRoom: 'HallwayCentral', targetX: 160, targetY: 220 }],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 120, y: 300, w: 150, h: 20 },
+                    { x: 350, y: 240, w: 150, h: 20 },
+                    { x: 580, y: 180, w: 130, h: 20 }
+                ],
+                desk: { x: 615, y: 120, w: 60, h: 50, subject: 'Computer' },
+                teacher: null
+            },
+            Cafeteria: {
+                title: 'Cafeteria', color: '#fff4d6',
+                doors: [
+                    { x: 20, y: 280, w: 40, h: 100, targetRoom: 'HallwayCentral', targetX: 500, targetY: 300 },
+                    { x: 740, y: 280, w: 40, h: 100, targetRoom: 'Music', targetX: 70, targetY: 300 }
+                ],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 180, y: 300, w: 120, h: 20 },
+                    { x: 400, y: 250, w: 150, h: 20 }
+                ],
+                desk: { x: 440, y: 200, w: 60, h: 50, subject: 'Cafeteria' },
+                teacher: null
+            },
+            Music: {
+                title: 'Music Room', color: '#f0e6ff',
+                doors: [{ x: 20, y: 280, w: 40, h: 100, targetRoom: 'Cafeteria', targetX: 700, targetY: 300 }],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 120, y: 270, w: 170, h: 20 },
+                    { x: 380, y: 210, w: 170, h: 20 },
+                    { x: 620, y: 280, w: 100, h: 20 }
+                ],
+                desk: { x: 430, y: 160, w: 60, h: 50, subject: 'Music' },
+                teacher: { x: 650, y: 330, range: 100, dir: -1, timer: 0, state: 'WRITING' }
+            },
+            Principal: {
+                title: 'Principal Office', color: '#fffae6',
+                doors: [],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 250, y: 290, w: 300, h: 20 },
+                    { x: 350, y: 200, w: 100, h: 20 }
+                ],
+                desk: null, teacher: null
+            },
+            Level2Hall: {
+                title: 'LEVEL 2: Detention Block', color: '#d9d9e8',
+                doors: [{ x: 740, y: 280, w: 50, h: 100, targetRoom: 'SecondFloor', targetX: 80, targetY: 300 }],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 150, y: 285, w: 170, h: 20 },
+                    { x: 420, y: 225, w: 180, h: 20 },
+                    { x: 285, y: 145, w: 160, h: 20 }
+                ],
+                desk: null, teacher: null,
+                enemies: [
+                    { x: 230, y: 330, w: 28, h: 38, dir: 1, speed: 85, phase: 0 },
+                    { x: 560, y: 330, w: 28, h: 38, dir: -1, speed: 105, phase: 2 },
+                    { x: 370, y: 95, w: 28, h: 38, dir: 1, speed: 70, phase: 4, chase: true }
+                ]
+            },
+            SecondFloor: {
+                title: 'LEVEL 2: SECOND FLOOR', color: '#d9f0ff', width: 1600,
+                doors: [
+                    { x: 40, y: 280, w: 50, h: 100, targetRoom: 'WestbridgeHub', targetX: 680, targetY: 300 },
+                    { x: 430, y: 220, w: 70, h: 100, targetRoom: 'HistoryClass', targetX: 100, targetY: 300 },
+                    { x: 850, y: 220, w: 70, h: 100, targetRoom: 'ChemistryClass', targetX: 100, targetY: 300 },
+                    { x: 1250, y: 220, w: 70, h: 100, targetRoom: 'MusicClass', targetX: 100, targetY: 300 },
+                    { x: 1470, y: 100, w: 70, h: 90, targetRoom: 'Level2Exit', targetX: 400, targetY: 320, reqCore: true, reqSecondFloor: true, label: 'Rooftop Stairwell' }
+                ],
+                platforms: [
+                    { x: 0, y: 380, w: 1600, h: 70 }, { x: 180, y: 300, w: 180, h: 20 },
+                    { x: 560, y: 285, w: 180, h: 20 }, { x: 970, y: 310, w: 180, h: 20 },
+                    { x: 1350, y: 260, w: 170, h: 20 }
+                ],
+                desk: null, teacher: { x: 720, y: 330, range: 150, dir: 1, timer: 0, state: 'WRITING' },
+                enemies: [{ x: 350, y: 330, w: 28, h: 38, dir: 1, speed: 125, phase: 1 }, { x: 1120, y: 330, w: 28, h: 38, dir: -1, speed: 140, phase: 3 }],
+                reporters: [{ x: 500, startX: 500, y: 330, dir: 1, speed: 65, range: 75, timer: 0, reported: false }]
+            },
+            HistoryClass: {
+                title: 'SECOND FLOOR: HISTORY', color: '#fff0c9',
+                doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: 'SecondFloor', targetX: 470, targetY: 300 }],
+                platforms: [{ x: 0, y: 380, w: 800, h: 70 }, { x: 140, y: 290, w: 180, h: 20 }, { x: 430, y: 230, w: 210, h: 20 }],
+                desk: { x: 500, y: 180, w: 60, h: 50, subject: 'History' },
+                teacher: { x: 620, y: 330, range: 145, dir: -1, timer: 0, state: 'WRITING' }
+            },
+            ChemistryClass: {
+                title: 'SECOND FLOOR: CHEMISTRY', color: '#e6ffe6',
+                doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: 'SecondFloor', targetX: 890, targetY: 300 }],
+                platforms: [{ x: 0, y: 380, w: 800, h: 70 }, { x: 100, y: 280, w: 170, h: 20 }, { x: 370, y: 210, w: 180, h: 20 }, { x: 630, y: 290, w: 120, h: 20 }],
+                desk: { x: 420, y: 160, w: 60, h: 50, subject: 'Chemistry' },
+                teacher: { x: 210, y: 330, range: 135, dir: 1, timer: 0, state: 'WRITING' }
+            },
+            MusicClass: {
+                title: 'SECOND FLOOR: MUSIC', color: '#f0e6ff',
+                doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: 'SecondFloor', targetX: 1290, targetY: 300 }],
+                platforms: [{ x: 0, y: 380, w: 800, h: 70 }, { x: 120, y: 280, w: 180, h: 20 }, { x: 400, y: 220, w: 180, h: 20 }, { x: 640, y: 290, w: 120, h: 20 }],
+                desk: { x: 440, y: 170, w: 60, h: 50, subject: 'MusicClass' },
+                teacher: { x: 650, y: 330, range: 155, dir: -1, timer: 0, state: 'WRITING' }
+            },
+            WestbridgeHub: {
+                title: 'WESTBRIDGE ACADEMY: QUAD', color: '#d9f0ff',
+                doors: [
+                    { x: 20, y: 280, w: 50, h: 100, targetRoom: 'WestbridgeShop', targetX: 110, targetY: 300 },
+                    { x: 740, y: 280, w: 50, h: 100, targetRoom: 'WestbridgeLab', targetX: 100, targetY: 300 },
+                    { x: 360, y: 90, w: 80, h: 80, targetRoom: 'SecondFloor', targetX: 80, targetY: 300, label: 'Second Floor' }
+                ],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 100, y: 290, w: 180, h: 20 },
+                    { x: 500, y: 250, w: 190, h: 20 },
+                    { x: 300, y: 180, w: 170, h: 20 }
+                ],
+                desk: null, teacher: null, enemies: [
+                    { x: 220, y: 330, w: 28, h: 38, dir: 1, speed: 95, phase: 0 },
+                    { x: 600, y: 330, w: 28, h: 38, dir: -1, speed: 110, phase: 2 }
+                ],
+                reporters: [{ x: 420, startX: 420, y: 330, dir: 1, speed: 60, range: 75, timer: 0, reported: false }]
+            },
+            WestbridgeShop: {
+                title: 'WESTBRIDGE ACADEMY: SUPPLY SHOP', color: '#fff0c9',
+                doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: 'WestbridgeHub', targetX: 120, targetY: 300 }],
+                platforms: [{ x: 0, y: 380, w: 800, h: 70 }, { x: 220, y: 275, w: 360, h: 20 }],
+                desk: null, teacher: null, enemies: []
+            },
+            WestbridgeLab: {
+                title: 'WESTBRIDGE ACADEMY: LASER LAB', color: '#e8dcff',
+                doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: 'WestbridgeHub', targetX: 680, targetY: 300 }],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 100, y: 300, w: 150, h: 20 },
+                    { x: 350, y: 220, w: 130, h: 20 },
+                    { x: 580, y: 290, w: 150, h: 20 }
+                ],
+                desk: null, teacher: null, enemies: [
+                    { x: 180, y: 255, w: 28, h: 38, dir: 1, speed: 125, phase: 3, chase: true },
+                    { x: 620, y: 330, w: 28, h: 38, dir: -1, speed: 135, phase: 5 }
+                ]
+            },
+            Level2Exit: {
+                title: 'WESTBRIDGE ACADEMY: ROOFTOP', color: '#dff5df',
+                doors: [{ x: 370, y: 120, w: 60, h: 80, targetRoom: 'FinalExit', targetX: 400, targetY: 320 }],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    { x: 250, y: 290, w: 300, h: 20 },
+                    { x: 350, y: 200, w: 100, h: 20 }
+                ],
+                desk: null, teacher: null, enemies: []
+            },
+            FinalExit: {
+                title: 'FINAL EXIT', color: '#eaffd8', doors: [],
+                platforms: [{ x: 0, y: 380, w: 800, h: 70 }, { x: 250, y: 290, w: 300, h: 20 }],
+                desk: null, teacher: null, enemies: []
+            }
+        };
+
+        Object.values(rooms).forEach(room => {
+            room.width ||= 1600;
+            const floor = room.platforms.find(platform => platform.y === 380);
+            if (floor) floor.w = Math.max(floor.w, room.width);
+            if (room.enemies) room.enemies.forEach(enemy => enemy.startX ??= enemy.x);
+        });
+
+        // Homework Dataset
+        const homeworkData = {
+            Math: [
+                { q: "What is 7 + 5?", options: ["10", "12", "13", "75"], a: "12" },
+                { q: "What is 9 - 4?", options: ["3", "4", "5", "6"], a: "5" },
+                { q: "What is 3 × 4?", options: ["7", "10", "12", "14"], a: "12" },
+                { q: "Which number is even?", options: ["7", "9", "11", "14"], a: "14" },
+                { q: "What is 20 ÷ 5?", options: ["2", "4", "5", "10"], a: "4" },
+                { q: "What comes next: 2, 4, 6, __?", options: ["7", "8", "9", "10"], a: "8" }
+            ],
+            ELA: [
+                { q: "Which word is spelled correctly?", options: ["Because", "Becaus", "Beacuse", "Becose"], a: "Because" },
+                { q: "Which is a noun?", options: ["Run", "Blue", "School", "Quickly"], a: "School" },
+                { q: "Choose the best ending: 'The dog wagged __ tail.'", options: ["its", "it's", "it", "its'"], a: "its" },
+                { q: "What is the opposite of 'ancient'?", options: ["Old", "Modern", "Dusty", "Tiny"], a: "Modern" },
+                { q: "Which sentence is punctuated correctly?", options: ["Wow! That was close.", "Wow That was close", "Wow, That was close", "Wow! that was close."], a: "Wow! That was close." },
+                { q: "A story's main character is often called the…", options: ["Setting", "Protagonist", "Paragraph", "Title"], a: "Protagonist" }
+            ],
+            Science: [
+                { q: "What do plants use to make food?", options: ["Sunlight", "Shoes", "Sand", "Plastic"], a: "Sunlight" },
+                { q: "What planet do we live on?", options: ["Mars", "Venus", "Earth", "Jupiter"], a: "Earth" },
+                { q: "Water freezes at what temperature (°C)?", options: ["0", "10", "32", "100"], a: "0" },
+                { q: "Which is a state of matter?", options: ["Solid", "Loud", "Fast", "Bright"], a: "Solid" },
+                { q: "What organ pumps blood?", options: ["Lung", "Heart", "Brain", "Stomach"], a: "Heart" },
+                { q: "The Moon orbits the…", options: ["Sun only", "Earth", "Mars", "School"], a: "Earth" }
+            ],
+            Gym: [
+                { q: "Which helps you land safely?", options: ["Bend your knees", "Close your eyes", "Stand stiff", "Jump backward"], a: "Bend your knees" },
+                { q: "What should you do before exercise?", options: ["Warm up", "Nap", "Eat a pencil", "Run into a wall"], a: "Warm up" },
+                { q: "Which is a team sport?", options: ["Basketball", "Solitaire", "Chess alone", "Sleeping"], a: "Basketball" },
+                { q: "What should you do if you're thirsty during exercise?", options: ["Drink water", "Ignore it forever", "Drink glue", "Eat chalk"], a: "Drink water" },
+                { q: "A healthy cool-down usually involves…", options: ["Gentle movement", "Instantly falling asleep", "Sprinting forever", "Holding your breath"], a: "Gentle movement" },
+                { q: "What does cardio mainly train?", options: ["Heart and lungs", "Shoelaces", "Ears", "Hair"], a: "Heart and lungs" }
+            ],
+            Art: [
+                { q: "Which tool is best for drawing a thin line?", options: ["Pencil", "Bucket", "Eraser", "Chair"], a: "Pencil" },
+                { q: "Red + blue makes…", options: ["Green", "Purple", "Orange", "Black"], a: "Purple" },
+                { q: "What does an eraser do?", options: ["Removes marks", "Adds gravity", "Paints doors", "Makes music"], a: "Removes marks" },
+                { q: "Which is a warm color?", options: ["Orange", "Blue", "Cyan", "Violet"], a: "Orange" }
+            ],
+            Computer: [
+                { q: "What does CPU stand for?", options: ["Central Processing Unit", "Computer Paint Utility", "Cool Program User", "Central Pencil Unit"], a: "Central Processing Unit" },
+                { q: "Which is used to click things?", options: ["Mouse", "Monitor", "Speaker", "Printer"], a: "Mouse" },
+                { q: "What does Ctrl+S usually do?", options: ["Save", "Sleep", "Sprint", "Smile"], a: "Save" },
+                { q: "Which is an input device?", options: ["Keyboard", "Monitor", "Speaker", "Projector"], a: "Keyboard" }
+            ],
+            Cafeteria: [
+                { q: "Which is usually a fruit?", options: ["Apple", "Bread", "Cheese", "Rice"], a: "Apple" },
+                { q: "What should you do before eating?", options: ["Wash your hands", "Paint your fork", "Hide your lunch", "Run laps"], a: "Wash your hands" },
+                { q: "Which drink is best for hydration?", options: ["Water", "Glue", "Paint", "Soda only"], a: "Water" },
+                { q: "Where should trash go?", options: ["Trash can", "Floor", "Desk", "Ceiling"], a: "Trash can" }
+            ],
+            Music: [
+                { q: "How many beats are in common 4/4 measure?", options: ["2", "3", "4", "8"], a: "4" },
+                { q: "Which is a string instrument?", options: ["Guitar", "Trumpet", "Drum", "Flute"], a: "Guitar" },
+                { q: "What symbol raises a note by a semitone?", options: ["Sharp", "Rest", "Clef", "Bar line"], a: "Sharp" },
+                { q: "Which instrument has keys?", options: ["Piano", "Violin", "Trumpet", "Drum"], a: "Piano" }
+            ]
+            ,History: [
+                { q: "Which came first?", options: ["The printing press", "The internet", "The moon landing", "The smartphone"], a: "The printing press" },
+                { q: "A person who studies the past is a…", options: ["Historian", "Pilot", "Chemist", "Composer"], a: "Historian" },
+                { q: "Ancient Egyptians used writing called…", options: ["Hieroglyphics", "Binary", "Morse code", "Braille"], a: "Hieroglyphics" }
+            ],
+            Chemistry: [
+                { q: "Water is made from hydrogen and…", options: ["Oxygen", "Iron", "Carbon", "Gold"], a: "Oxygen" },
+                { q: "A pH below 7 is…", options: ["Acidic", "Basic", "Frozen", "Metallic"], a: "Acidic" },
+                { q: "Which is a gas?", options: ["Oxygen", "Brick", "Water ice", "Copper wire"], a: "Oxygen" }
+            ],
+            MusicClass: [
+                { q: "What keeps a song's steady pulse?", options: ["Beat", "Canvas", "Paragraph", "Orbit"], a: "Beat" },
+                { q: "A group of notes played together is a…", options: ["Chord", "Chapter", "Circuit", "Classroom"], a: "Chord" },
+                { q: "Which instrument is played with a bow?", options: ["Violin", "Drum", "Flute", "Piano"], a: "Violin" }
+            ]
+        };
+
+        const extraQuestionPools = {
+            History: [
+                { q: 'Which came first?', options: ['The printing press', 'The internet', 'The moon landing', 'The smartphone'], a: 'The printing press' },
+                { q: 'A person who studies the past is a...', options: ['Historian', 'Pilot', 'Chemist', 'Composer'], a: 'Historian' },
+                { q: 'Ancient Egyptians used writing called...', options: ['Hieroglyphics', 'Binary', 'Morse code', 'Braille'], a: 'Hieroglyphics' }
+            ],
+            Chemistry: [
+                { q: 'Water is made from hydrogen and...', options: ['Oxygen', 'Iron', 'Carbon', 'Gold'], a: 'Oxygen' },
+                { q: 'A pH below 7 is...', options: ['Acidic', 'Basic', 'Frozen', 'Metallic'], a: 'Acidic' },
+                { q: 'Which is a gas?', options: ['Oxygen', 'Brick', 'Water ice', 'Copper wire'], a: 'Oxygen' }
+            ],
+            MusicClass: [
+                { q: 'What keeps a song\'s steady pulse?', options: ['Beat', 'Canvas', 'Paragraph', 'Orbit'], a: 'Beat' },
+                { q: 'A group of notes played together is a...', options: ['Chord', 'Chapter', 'Circuit', 'Classroom'], a: 'Chord' },
+                { q: 'Which instrument is played with a bow?', options: ['Violin', 'Drum', 'Flute', 'Piano'], a: 'Violin' }
+            ]
+        };
+
+        Object.assign(homeworkData, extraQuestionPools);
+
+        window.addEventListener('keydown', (e) => {
+            if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
+            if (capturingKeybind) {
+                keybinds[capturingKeybind] = e.code;
+                document.getElementById(`bind-${capturingKeybind}`).innerText = keyLabel(e.code);
+                document.getElementById('optionsStatus').innerText = `${keyLabel(e.code)} assigned.`;
+                saveOptions();
+                capturingKeybind = null;
+                return;
+            }
+            keys[e.code] = true;
+            if ((e.code === 'KeyP' || e.code === 'Escape') && (gameState === 'PLAYING' || gameState === 'PAUSED')) togglePause();
+            if (e.code === 'KeyM') toggleSound();
+            if (e.code === keybinds.food && gameState === 'PLAYING') useFood();
+            if (e.code === keybinds.pass && gameState === 'PLAYING') useHallPass();
+            if (e.code === 'KeyJ' && gameState === 'PLAYING') useHelper();
+            if (e.code === keybinds.slack && !e.repeat) {
+                setSlacking(true);
+                playTone(180, 0.04);
+            }
+            if ((e.code === keybinds.jump || e.code === 'ArrowUp') && gameState === 'PLAYING') {
+                jumpPlayer();
+            }
+            if (e.code === keybinds.interact && gameState === 'PLAYING') {
+                interactObject();
+            }
+            if ((e.code === keybinds.sprint || e.code === 'ShiftRight') && gameState === 'PLAYING') {
+                setSprinting(true);
+            }
+            if (e.code === keybinds.dash && gameState === 'PLAYING') {
+                dashPlayer();
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            keys[e.code] = false;
+            if (e.code === keybinds.slack) {
+                setSlacking(false);
+            }
+            if (e.code === keybinds.sprint || e.code === 'ShiftRight') setSprinting(false);
+        });
+
+        function setSlacking(val) {
+            if (gameState === 'PLAYING') {
+                isSlacking = val;
+            }
+        }
+
+        function setSprinting(value) {
+            if (value && (player.sprintLocked || sprintStamina <= 0)) {
+                player.sprinting = false;
+                document.getElementById('statusText').innerText = 'Exhausted. Hold Slack while still to refill sprint stamina.';
+                return;
+            }
+            player.sprinting = value;
+        }
+
+        function keyLabel(code) {
+            return code.replace('Key', '').replace('Arrow', '').replace('Left', ' Left').replace('Right', ' Right');
+        }
+
+        function beginKeybindCapture(action) {
+            capturingKeybind = action;
+            document.getElementById('optionsStatus').innerText = `Press a key for ${action}.`;
+        }
+
+        function mobileKeyDown(code) {
+            keys[code] = true;
+            keys[code === 'ArrowLeft' ? keybinds.left : keybinds.right] = true;
+        }
+
+        function mobileKeyUp(code) {
+            keys[code] = false;
+            keys[code === 'ArrowLeft' ? keybinds.left : keybinds.right] = false;
+        }
+
+        function mobileAction(action) {
+            if (gameState !== 'PLAYING') return;
+            if (action === 'jump') jumpPlayer();
+            if (action === 'interact') interactObject();
+            if (action === 'slack') setSlacking(!isSlacking);
+            if (action === 'sprint') setSprinting(true);
+            if (action === 'sprintStop') setSprinting(false);
+            if (action === 'dash') dashPlayer();
+        }
+
+        function updateJoystick(event) {
+            const joystick = document.getElementById('joystick');
+            const knob = document.getElementById('joystickKnob');
+            const bounds = joystick.getBoundingClientRect();
+            const centerX = bounds.left + bounds.width / 2;
+            const centerY = bounds.top + bounds.height / 2;
+            const maxDistance = bounds.width * 0.36;
+            const deltaX = event.clientX - centerX;
+            const deltaY = event.clientY - centerY;
+            const distance = Math.hypot(deltaX, deltaY);
+            const deadZone = maxDistance * 0.16;
+            const scale = distance > maxDistance ? maxDistance / distance : 1;
+            const knobX = deltaX * scale;
+            const knobY = deltaY * scale;
+            const horizontalInput = Math.abs(deltaX) > deadZone ? deltaX / maxDistance : 0;
+
+            knob.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
+            keys[keybinds.left] = horizontalInput < 0;
+            keys[keybinds.right] = horizontalInput > 0;
+        }
+
+        function resetJoystick() {
+            document.getElementById('joystickKnob').style.transform = 'translate(-50%, -50%)';
+            keys[keybinds.left] = false;
+            keys[keybinds.right] = false;
+        }
+
+        function setupJoystick() {
+            const joystick = document.getElementById('joystick');
+            joystick.addEventListener('pointerdown', event => {
+                if (joystickPointerId !== null) return;
+                joystickPointerId = event.pointerId;
+                try {
+                    joystick.setPointerCapture(event.pointerId);
+                } catch (error) {
+                    joystickPointerId = null;
+                    return;
+                }
+                updateJoystick(event);
+            });
+            joystick.addEventListener('pointermove', event => {
+                if (event.pointerId === joystickPointerId && joystick.hasPointerCapture(event.pointerId)) updateJoystick(event);
+            });
+            const releaseJoystick = event => {
+                if (event.pointerId !== joystickPointerId) return;
+                joystickPointerId = null;
+                resetJoystick();
+            };
+            joystick.addEventListener('pointerup', releaseJoystick);
+            joystick.addEventListener('pointercancel', releaseJoystick);
+            joystick.addEventListener('lostpointercapture', () => {
+                joystickPointerId = null;
+                resetJoystick();
+            });
+        }
+
+        function startGame() {
+            document.getElementById('startOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('pauseOverlay').classList.add('hidden');
+            document.getElementById('pauseBtn').innerHTML = '<span aria-hidden="true">⏸</span> Pause (P)';
+            gameState = 'PLAYING';
+            isPaused = false;
+            lastTimestamp = 0;
+            lastFrameTime = 0;
+            gameTime = 0;
+            initializeRoomCoins();
+            updateUI();
+            lockLandscape();
+            playTone(440, 0.08);
+            requestAnimationFrame(gameLoop);
+        }
+
+        function lockLandscape() {
+            if (screen.orientation && screen.orientation.lock) {
+                screen.orientation.lock('landscape').catch(() => {});
+            }
+        }
+
+        function toggleOptions() {
+            document.getElementById('optionsPanel').classList.toggle('hidden');
+        }
+
+        function saveOptions() {
+            localStorage.setItem(optionsStorageKey, JSON.stringify({
+                resolution: document.getElementById('resolutionOption').value,
+                theme: document.getElementById('themeOption').value,
+                fps: document.getElementById('fpsOption').value,
+                keybinds
+            }));
+        }
+
+        function loadOptions() {
+            try {
+                const savedOptions = JSON.parse(localStorage.getItem(optionsStorageKey));
+                if (!savedOptions) return;
+
+                ['resolution', 'theme', 'fps'].forEach(option => {
+                    const select = document.getElementById(`${option}Option`);
+                    if (savedOptions[option] && [...select.options].some(item => item.value === savedOptions[option])) {
+                        select.value = savedOptions[option];
+                    }
+                });
+
+                if (savedOptions.keybinds) {
+                    Object.keys(keybinds).forEach(action => {
+                        if (typeof savedOptions.keybinds[action] === 'string') keybinds[action] = savedOptions.keybinds[action];
+                    });
+                }
+            } catch (error) {
+                localStorage.removeItem(optionsStorageKey);
+            }
+        }
+
+        function updateKeybindLabels() {
+            Object.keys(keybinds).forEach(action => {
+                const button = document.getElementById(`bind-${action}`);
+                if (button) button.innerText = keyLabel(keybinds[action]);
+            });
+        }
+
+        function applyOptions() {
+            const resolution = Number(document.getElementById('resolutionOption').value);
+            maxFps = Number(document.getElementById('fpsOption').value);
+            frameInterval = 1000 / maxFps;
+            canvas.style.width = `${resolution}px`;
+            canvas.style.height = `${resolution * 0.5625}px`;
+            canvas.style.maxWidth = '100%';
+            document.body.dataset.theme = document.getElementById('themeOption').value;
+            document.getElementById('optionsStatus').innerText = `${resolution}x${resolution * 0.5625} | ${maxFps} FPS applied`;
+            saveOptions();
+        }
+
+        function restartGame() {
+            const retryLevel = level;
+            const retrySubjects = [...activeLevelSubjects];
+            const retryAbilities = {
+                canDoubleJump: player.canDoubleJump,
+                canStealth: player.canStealth,
+                canDash: player.canDash,
+                hasMasterKey: player.hasMasterKey
+            };
+
+            energy = 100;
+            sprintStamina = maxSprintStamina;
+            resetLevelObjectives(retryLevel === 1 ? ['Math', 'ELA', 'Science', 'Gym'] : retrySubjects);
+            isSlacking = false;
+            isPaused = false;
+            keys = {};
+            doorIntent = false;
+            lastTimestamp = 0;
+            player.x = 100;
+            player.y = 300;
+            player.vx = 0;
+            player.vy = 0;
+            player.grounded = false;
+            player.doubleJumpsLeft = 0;
+            doorCooldown = 0;
+            spawnSafeTime = 1.25;
+            sprintTime = 0;
+            player.sprintBoost = false;
+            player.sprinting = false;
+            player.sprintLocked = false;
+            player.dashTime = 0;
+            particles = [];
+            roomBanner = { text: '', time: 0 };
+            combo = 0;
+            level = retryLevel;
+            if (retryLevel === 1) {
+                coins = 0;
+                inventory = { food: 0, hallPasses: 0, helpers: [] };
+                roomCoinsInitialized = false;
+            }
+            player.canDoubleJump = retryLevel === 1 ? false : retryAbilities.canDoubleJump;
+            player.canStealth = retryLevel === 1 ? false : retryAbilities.canStealth;
+            player.canDash = retryLevel === 1 ? false : retryAbilities.canDash;
+            player.hasMasterKey = retryLevel === 1 ? false : retryAbilities.hasMasterKey;
+            currentRoomKey = retryLevel === 1 ? 'Math' : (retryLevel === 2 ? 'WestbridgeHub' : `Level${retryLevel}Hub`);
+            checkpoint = { room: currentRoomKey, x: 100, y: 300 };
+            cameraX = 0;
+            Object.values(rooms).forEach(room => {
+                if (room.teacher) {
+                    room.teacher.timer = 0;
+                    room.teacher.state = 'WRITING';
+                    room.teacher.nextDecision = 1.5 + Math.random() * 2.5;
+                    room.teacher.patrolSpeed = 30 + Math.random() * 35;
+                    room.teacher.dir = Math.random() < 0.5 ? -1 : 1;
+                }
+                if (room.balls) room.balls = [];
+                if (room.enemies) room.enemies.forEach(enemy => enemy.x = enemy.startX || enemy.x);
+                if (room.reporters) room.reporters.forEach(reporter => {
+                    reporter.x = reporter.startX || reporter.x;
+                    reporter.timer = 0;
+                    reporter.reported = false;
+                });
+            });
+            updateUI();
+            startGame();
+        }
+
+        function resetLevelObjectives(subjects) {
+            homeworkDone = {};
+            subjects.forEach(subject => homeworkDone[subject] = false);
+            activeLevelSubjects = subjects;
+            activeHomework = [];
+        }
+
+        function setupGeneratedLevel(levelNumber) {
+            const hubKey = `Level${levelNumber}Hub`;
+            const classSubjects = shuffleArray(['History', 'Chemistry', 'MusicClass', 'Math', 'Science', 'ELA', 'Art', 'Computer', 'Cafeteria', 'Gym'])
+                .slice(0, 6);
+            const generatedSubjects = classSubjects.map((subject, index) => `L${levelNumber}C${index + 1}`);
+            const classDoors = generatedSubjects.map((subject, index) => ({
+                x: 260 + index * 380,
+                y: 220,
+                w: 70,
+                h: 100,
+                targetRoom: `${hubKey}Class${index + 1}`,
+                targetX: 100,
+                targetY: 300,
+                label: `${classSubjects[index]} classroom`
+            }));
+            classDoors.push({
+                x: 2450,
+                y: 100,
+                w: 80,
+                h: 100,
+                targetRoom: 'FinalExit',
+                targetX: 400,
+                targetY: 320,
+                reqLevelSubjects: true,
+                isLevelExit: true,
+                label: `Level ${levelNumber} exit`
+            });
+
+            rooms[hubKey] = {
+                title: `LEVEL ${levelNumber}: ACADEMY WING`,
+                color: levelNumber % 2 ? '#e8f1ff' : '#fff0d8',
+                width: 2700,
+                doors: classDoors,
+                platforms: [
+                    { x: 0, y: 380, w: 2700, h: 70 },
+                    { x: 120, y: 300, w: 180, h: 20 },
+                    { x: 520, y: 270, w: 180, h: 20 },
+                    { x: 920, y: 310, w: 180, h: 20 },
+                    { x: 1320, y: 260, w: 190, h: 20 },
+                    { x: 1720, y: 300, w: 190, h: 20 },
+                    { x: 2120, y: 250, w: 190, h: 20 }
+                ],
+                desk: null,
+                teacher: { x: 620, y: 330, range: 130 + levelNumber * 4, dir: 1, timer: 0, state: 'WRITING' },
+                enemies: [
+                    { x: 420, startX: 420, y: 330, w: 28, h: 38, dir: 1, speed: 90 + levelNumber * 8, phase: levelNumber },
+                    { x: 1180, startX: 1180, y: 330, w: 28, h: 38, dir: -1, speed: 105 + levelNumber * 8, phase: levelNumber + 2, chase: levelNumber > 5 },
+                    { x: 1980, startX: 1980, y: 330, w: 28, h: 38, dir: 1, speed: 115 + levelNumber * 8, phase: levelNumber + 4, chase: levelNumber > 7 }
+                ],
+                reporters: [
+                    { x: 760, startX: 760, y: 330, dir: 1, speed: 55 + levelNumber * 3, range: 75, timer: 0, reported: false },
+                    { x: 1450, startX: 1450, y: 330, dir: -1, speed: 65 + levelNumber * 3, range: 75, timer: 0, reported: false }
+                ]
+            };
+
+            generatedSubjects.forEach((subject, index) => {
+                const sourceQuestions = homeworkData[classSubjects[index]] || homeworkData.Math;
+                homeworkData[subject] = sourceQuestions.map(item => ({
+                    q: `LEVEL ${levelNumber}: ${item.q}`,
+                    options: [...item.options],
+                    a: item.a
+                }));
+                rooms[`${hubKey}Class${index + 1}`] = {
+                    title: `LEVEL ${levelNumber}: ${classSubjects[index].toUpperCase()}`,
+                    color: ['#fff4d6', '#e6ffe6', '#f0e6ff', '#e6f2ff'][index],
+                    width: 1200,
+                    doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: hubKey, targetX: 280 + index * 370, targetY: 300 }],
+                    platforms: [{ x: 0, y: 380, w: 1200, h: 70 }, { x: 140, y: 290, w: 180, h: 20 }, { x: 430, y: 220, w: 220, h: 20 }, { x: 820, y: 300, w: 220, h: 20 }],
+                    desk: { x: 500, y: 170, w: 60, h: 50, subject },
+                    teacher: { x: 620, y: 330, range: 120 + levelNumber * 5, dir: index % 2 ? -1 : 1, timer: 0, state: 'WRITING' },
+                    reporters: [{ x: 270, startX: 270, y: 330, dir: 1, speed: 45 + levelNumber * 3, range: 65, timer: 0, reported: false }]
+                };
+            });
+
+            resetLevelObjectives(generatedSubjects);
+            return hubKey;
+        }
+
+        function startLevel2() {
+            level = 2;
+            setupGeneratedLevel(2);
+            energy = maxEnergy;
+            sprintStamina = maxSprintStamina;
+            player.sprintLocked = false;
+            gameState = 'PLAYING';
+            document.getElementById('levelCompleteOverlay').classList.add('hidden');
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            currentRoomKey = 'Level2Hub';
+            cameraX = 0;
+            player.x = 100;
+            player.y = 300;
+            player.vx = 0;
+            player.vy = 0;
+            checkpoint = { room: 'Level2Hub', x: 100, y: 300 };
+            doorCooldown = 0.8;
+            spawnSafeTime = 1.25;
+            document.getElementById('statusText').innerText = 'Status: LEVEL 2 - Westbridge Academy!';
+            roomBanner = { text: 'LEVEL 2: WESTBRIDGE WING', time: 2.2 };
+            spawnBurst(player.x, player.y, '#63e6be', 24);
+            updateUI();
+            playTone(180, 0.2);
+        }
+
+        function advanceLevel() {
+            if (level >= 10) {
+                triggerWin();
+                return;
+            }
+
+            level++;
+            const hubKey = setupGeneratedLevel(level);
+            energy = maxEnergy;
+            sprintStamina = maxSprintStamina;
+            player.sprintLocked = false;
+            currentRoomKey = hubKey;
+            cameraX = 0;
+            player.x = 100;
+            player.y = 300;
+            player.vx = 0;
+            player.vy = 0;
+            checkpoint = { room: hubKey, x: 100, y: 300 };
+            doorCooldown = 0.8;
+            spawnSafeTime = 1.25;
+            gameState = 'PLAYING';
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('statusText').innerText = `Status: LEVEL ${level} - New academy wing!`;
+            roomBanner = { text: `LEVEL ${level}: NEW WING`, time: 2.2 };
+            spawnBurst(player.x, player.y, '#63e6be', 24);
+            updateUI();
+            playTone(180, 0.2);
+        }
+
+        function showLevel1Complete() {
+            gameState = 'LEVEL1_COMPLETE';
+            isSlacking = false;
+            document.getElementById('levelCompleteOverlay').classList.remove('hidden');
+            updateUI();
+            playTone(880, 0.2);
+        }
+
+        function continueToLevel2() {
+            startLevel2();
+        }
+
+        function continueAfterWin() {
+            if (level < 10) advanceLevel();
+            else returnToMenu();
+        }
+
+        function returnToMenu() {
+            gameState = 'MENU';
+            level = 1;
+            isPaused = false;
+            isSlacking = false;
+            keys = {};
+            doorIntent = false;
+            cameraX = 0;
+            currentRoomKey = 'Math';
+            resetLevelObjectives(['Math', 'ELA', 'Science', 'Gym']);
+            energy = maxEnergy;
+            sprintStamina = maxSprintStamina;
+            player.sprintLocked = false;
+            player.x = 100;
+            player.y = 300;
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('levelCompleteOverlay').classList.add('hidden');
+            document.getElementById('pauseOverlay').classList.add('hidden');
+            document.getElementById('startOverlay').classList.remove('hidden');
+            document.getElementById('statusText').innerText = 'Status: Exploring School...';
+            updateUI();
+            draw();
+        }
+
+        function initializeRoomCoins() {
+            if (roomCoinsInitialized) return;
+            Object.values(rooms).forEach(room => {
+                room.coins = [];
+                const floorSpots = [
+                    { x: 130, y: 350 }, { x: 390, y: 350 }, { x: 650, y: 350 }
+                ];
+                floorSpots.forEach(spot => {
+                    if (Math.random() < 0.25 && room.coins.length < 3) {
+                        room.coins.push({ x: spot.x, y: spot.y, collected: false, bob: Math.random() * Math.PI * 2 });
+                    }
+                });
+            });
+            roomCoinsInitialized = true;
+        }
+
+        function collectRoomCoins(room) {
+            if (!room.coins) return;
+            room.coins.forEach(coin => {
+                if (!coin.collected && Math.abs((player.x + player.w / 2) - coin.x) < 24 && Math.abs((player.y + player.h / 2) - coin.y) < 30) {
+                    coin.collected = true;
+                    coins++;
+                    combo++;
+                    spawnBurst(coin.x, coin.y, '#ffd43b', 10); // Added burst effect for coin collection
+                    roomBanner = { text: combo > 1 ? `COIN COMBO x${combo}!` : 'COIN GET!', time: 1.2 };
+                    playTone(980, 0.05);
+                }
+            });
+        }
+
+        function useFood() {
+            if (inventory.food < 1) return;
+            inventory.food--;
+            energy = Math.min(100, energy + 35);
+            updateUI();
+            playTone(600, 0.08);
+        }
+
+        function useHallPass() {
+            if (inventory.hallPasses < 1 || sprintTime > 0) return;
+            inventory.hallPasses--;
+            sprintTime = 60;
+            updateUI();
+            particles = [];
+            roomBanner = { text: '', time: 0 };
+            combo = 0;
+            player.sprintBoost = false;
+            playTone(760, 0.08);
+        }
+
+        function closeHomeworkComplete() {
+            document.getElementById('homeworkCompleteOverlay').classList.add('hidden');
+            gameState = 'PLAYING';
+            updateUI();
+        }
+
+        function useHelper() {
+            if (!inventory.helpers.length) return;
+            const helper = inventory.helpers.shift();
+            if (helper === 'energy') energy = Math.min(100, energy + 20);
+            if (helper === 'stealth') player.canStealth = true;
+            if (helper === 'dash') sprintTime = Math.max(sprintTime, 20);
+            document.getElementById('statusText').innerText = `Used mystery helper: ${helper.toUpperCase()}!`;
+            updateUI();
+            playTone(820, 0.08);
+        }
+
+        function openShop() {
+            if (currentRoomKey !== 'WestbridgeShop') {
+                document.getElementById('statusText').innerText = 'Shop: Enter the Westbridge Supply Shop first.';
+                return;
+            }
+            gameState = 'SHOP';
+            updateShopUI();
+            document.getElementById('shopModal').classList.remove('hidden');
+        }
+
+        function closeShop() {
+            document.getElementById('shopModal').classList.add('hidden');
+            if (gameState === 'SHOP') gameState = 'PLAYING';
+        }
+
+        function buyShopItem(item) {
+            const costs = { food: 3, pass: 5, random: 4 };
+            if (coins < costs[item]) {
+                document.getElementById('shopMessage').innerText = 'Not enough coins yet.';
+                return;
+            }
+            coins -= costs[item];
+            if (item === 'food') inventory.food++;
+            if (item === 'pass') inventory.hallPasses++;
+            if (item === 'random') {
+                const helper = ['energy', 'stealth', 'dash'][Math.floor(Math.random() * 3)];
+                inventory.helpers.push(helper);
+                document.getElementById('shopMessage').innerText = `Mystery helper stored: ${helper.toUpperCase()} (press J).`;
+            } else {
+                document.getElementById('shopMessage').innerText = 'Purchase added to your inventory.';
+            }
+            updateShopUI();
+            updateUI();
+            playTone(740, 0.08);
+        }
+
+        function updateShopUI() {
+            document.getElementById('shopCoins').innerText = coins;
+            document.getElementById('shopFood').innerText = inventory.food;
+            document.getElementById('shopPasses').innerText = inventory.hallPasses;
+            document.getElementById('shopHelpers').innerText = inventory.helpers.length;
+        }
+
+        function spawnBurst(x, y, color, count) {
+            for (let index = 0; index < count; index++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 35 + Math.random() * 90;
+                particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, life: 0.45 + Math.random() * 0.35, color });
+            }
+        }
+
+        function updateParticles(dt) {
+            particles = particles.filter(particle => particle.life > 0);
+            particles.forEach(particle => {
+                particle.x += particle.vx * dt;
+                particle.y += particle.vy * dt;
+                particle.vy += 80 * dt;
+                particle.life -= dt;
+            });
+        }
+
+        function drawParticles() {
+            particles.forEach(particle => {
+                ctx.globalAlpha = Math.max(0, particle.life * 2);
+                ctx.fillStyle = particle.color;
+                ctx.fillRect(Math.round(particle.x), Math.round(particle.y), 4, 4);
+            });
+            ctx.globalAlpha = 1;
+        }
+
+        function togglePause() {
+            if (gameState !== 'PLAYING' && gameState !== 'PAUSED') return;
+            isPaused = !isPaused;
+            document.getElementById('pauseBtn').innerHTML = isPaused ? '<span aria-hidden="true">▶</span> Resume (P)' : '<span aria-hidden="true">⏸</span> Pause (P)';
+            document.getElementById('pauseOverlay').classList.toggle('hidden', !isPaused);
+            gameState = isPaused ? 'PAUSED' : 'PLAYING';
+            document.getElementById('statusText').innerText = isPaused ? 'Status: Paused' : 'Status: Exploring School...';
+            playTone(isPaused ? 220 : 440, 0.05);
+        }
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            document.getElementById('soundBtn').innerText = soundEnabled ? 'Sound: ON (M)' : 'Sound: OFF (M)';
+            if (soundEnabled) playTone(440, 0.06);
+        }
+
+        function playTone(frequency, duration) {
+            if (!soundEnabled) return;
+            audioContext ||= new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            oscillator.type = 'square';
+            oscillator.frequency.value = frequency;
+            gain.gain.setValueAtTime(0.045, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+            oscillator.connect(gain).connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function jumpPlayer() {
+            if (player.grounded) {
+                player.vy = -560;
+                player.grounded = false;
+                player.doubleJumpsLeft = player.canDoubleJump ? 1 : 0;
+                spawnBurst(player.x + player.w / 2, player.y + player.h, '#ffffff', 5);
+                playTone(520, 0.04);
+            } else if (player.doubleJumpsLeft > 0) {
+                player.vy = -500;
+                player.doubleJumpsLeft--;
+                spawnBurst(player.x + player.w / 2, player.y + player.h, '#7dd3fc', 8);
+                playTone(720, 0.04);
+            }
+        }
+
+        function dashPlayer() {
+            if (!player.canDash || player.dashCooldown > 0) return;
+            const dir = (keys[keybinds.left] || keys['ArrowLeft']) ? -1 : ((keys[keybinds.right] || keys['ArrowRight']) ? 1 : (player.vx < 0 ? -1 : 1));
+            player.dashDirection = dir;
+            player.dashTime = 0.18;
+            player.dashCooldown = 0.75;
+            player.vy = 0;
+            spawnBurst(player.x + player.w / 2, player.y + player.h / 2, '#7dd3fc', 14);
+            playTone(300, 0.08);
+        }
+
+        function interactObject() {
+            const currentRoom = rooms[currentRoomKey];
+            const nearbyDoor = currentRoom.doors.find(door => {
+                const targetRoom = rooms[door.targetRoom];
+                return targetRoom &&
+                    Math.abs((player.x + player.w / 2) - (door.x + door.w / 2)) < 78 &&
+                    Math.abs((player.y + player.h / 2) - (door.y + door.h / 2)) < 90;
+            });
+            if (nearbyDoor) {
+                doorIntent = true;
+                document.getElementById('statusText').innerText = 'Door selected. Entering classroom...';
+                return;
+            }
+            if (currentRoom.desk && !homeworkDone[currentRoom.desk.subject]) {
+                const dist = Math.hypot((player.x + player.w / 2) - (currentRoom.desk.x + currentRoom.desk.w / 2), (player.y + player.h / 2) - (currentRoom.desk.y + currentRoom.desk.h / 2));
+                if (dist < 70) {
+                    openHomework(currentRoom.desk.subject);
+                }
+            }
+        }
+
+        function shuffleArray(arr) {
+            const copy = [...arr];
+            for (let i = copy.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [copy[i], copy[j]] = [copy[j], copy[i]];
+            }
+            return copy;
+        }
+
+        function openHomework(subject) {
+            if (gameState !== 'PLAYING') return;
+            gameState = 'HOMEWORK';
+
+            const modal = document.getElementById('homeworkModal');
+            const container = document.getElementById('hwQuestionsContainer');
+            document.getElementById('hwTitle').innerText = `${subject.toUpperCase()} HOMEWORK`;
+            document.getElementById('hwFeedback').innerText = "";
+            const showAnswers = level === 1;
+            document.getElementById('hwHint').innerText = showAnswers
+                ? 'LEVEL 1: The green PICK ME answer is your friend.'
+                : `LEVEL ${level}: No answer hints. Read carefully!`;
+
+            // Each visit gets a fresh random selection AND randomized answer order.
+            activeHomework = shuffleArray(homeworkData[subject])
+                .slice(0, Math.min(2, homeworkData[subject].length))
+                .map(item => ({ ...item, options: shuffleArray(item.options) }));
+
+            container.innerHTML = "";
+            activeHomework.forEach((item, idx) => {
+                const qBox = document.createElement('div');
+                qBox.className = 'quiz-question';
+                qBox.innerHTML = `
+                    <p class="quiz-prompt">${idx + 1}. ${item.q}</p>
+                    <div class="space-y-1">
+                        ${item.options.map(opt => {
+                            return `
+                            <label class="quiz-option">
+                                <input type="radio" name="q${idx}" value="${opt}">
+                                <span>${showAnswers && opt === item.a ? '★ PICK ME: ' : ''}${opt}</span>
+                            </label>
+                        `;
+                        }).join('')}
+                    </div>
+                `;
+                container.appendChild(qBox);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        function submitHomework() {
+            const currentSubject = rooms[currentRoomKey].desk.subject;
+            const data = activeHomework;
+            let allCorrect = true;
+
+            data.forEach((item, idx) => {
+                const selected = document.querySelector(`input[name="q${idx}"]:checked`);
+                if (!selected || selected.value !== item.a) {
+                    allCorrect = false;
+                }
+            });
+
+            if (allCorrect) {
+                homeworkDone[currentSubject] = true;
+                document.getElementById('homeworkModal').classList.add('hidden');
+                gameState = 'PLAYING';
+                
+                // Unlock Abilities according to solved homework
+                if (currentSubject === 'Math') player.canDoubleJump = true;
+                if (currentSubject === 'ELA') player.canStealth = true;
+                if (currentSubject === 'Science') player.canDash = true;
+                if (currentSubject === 'Gym') player.hasMasterKey = true;
+                activeHomework = [];
+
+                updateUI();
+                playTone(880, 0.12);
+                const reward = 1 + Math.floor(Math.random() * 5);
+                coins += reward;
+                spawnBurst(player.x + player.w / 2, player.y, '#ffd43b', 16);
+                document.getElementById('homeworkCompleteTitle').innerText = `${currentSubject.toUpperCase()} COMPLETE!`;
+                document.getElementById('homeworkCompleteReward').innerText = `+${reward} COINS | ${getAbilityName(currentSubject)}`;
+                document.getElementById('homeworkCompleteOverlay').classList.remove('hidden');
+                gameState = 'HOMEWORK_COMPLETE';
+                updateUI();
+
+            } else {
+                document.getElementById('hwFeedback').innerText = "❌ F- GRADE! Try again!";
+            }
+        }
+
+        function getAbilityName(subject) {
+            if (subject === 'Math') return 'Double Jump Sneakers 👟';
+            if (subject === 'ELA') return 'Stealth Hood 🥷';
+            if (subject === 'Science') return 'Hall Pass Dash ⚡';
+            if (subject === 'Gym') return 'Master Keycard 🔑';
+            return 'None';
+        }
+
+        function updateUI() {
+            document.getElementById('roomLabel').innerText = rooms[currentRoomKey].title;
+            let abs = [];
+            if (player.canDoubleJump) abs.push('DoubleJump');
+            if (player.canStealth) abs.push('Stealth');
+            if (player.canDash) abs.push('Dash');
+            if (player.hasMasterKey) abs.push('MasterKey');
+            const sprintLabel = sprintTime > 0 ? ` Pass:${Math.ceil(sprintTime)}s` : ` Stamina:${Math.ceil(sprintStamina)}%${player.sprintLocked ? ' LOCKED' : ''}`;
+            const completedClasses = activeLevelSubjects.filter(subject => homeworkDone[subject]).length;
+            document.getElementById('abilityLabel').innerText = `L${level} | Classes:${completedClasses}/${activeLevelSubjects.length} | ${abs.length > 0 ? abs.join(', ') : 'None'} | Coins:${coins} Food:${inventory.food} Pass:${inventory.hallPasses}${sprintLabel}`;
+            updateShopUI();
+        }
+
+        function triggerWin() {
+            gameState = 'WIN';
+            document.getElementById('gameOverTitle').innerText = level === 10 ? "🎉 LEVEL 10 CLEAR! YOU ESCAPED!" : `🎉 LEVEL ${level} CLEAR!`;
+            document.getElementById('gameOverTitle').className = "text-5xl font-black text-green-400 drop-shadow-[4px_4px_0px_#000] mb-4";
+            document.getElementById('gameOverReason').innerText = level > 1
+                ? `You cleared Level ${level} with ${coins} coins!`
+                : "You escaped Westbridge Academy with " + coins + " coins in your pocket!";
+            document.getElementById('nextLevelBtn').classList.toggle('hidden', level >= 10);
+            document.getElementById('retryLevelBtn').classList.toggle('hidden', level >= 10);
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+        }
+
+        function triggerGameOver(reason) {
+            gameState = 'GAMEOVER';
+            document.getElementById('nextLevelBtn').classList.add('hidden');
+            document.getElementById('retryLevelBtn').classList.remove('hidden');
+            document.getElementById('gameOverTitle').innerText = "DETENTION!";
+            document.getElementById('gameOverTitle').className = "text-5xl font-black text-yellow-300 drop-shadow-[4px_4px_0px_#000] mb-4";
+            document.getElementById('gameOverReason').innerText = reason;
+            document.getElementById('gameOverOverlay').classList.remove('hidden');
+        }
+
+        function toggleEasterEgg() {
+            document.getElementById('secretModal').classList.toggle('hidden');
+        }
+
+        function toggleChangelog() {
+            document.getElementById('changelogModal').classList.toggle('hidden');
+        }
+
+        function toggleFullscreen() {
+            const appWindow = document.getElementById('appWindow');
+            if (document.fullscreenElement) {
+                document.exitFullscreen();
+            } else if (appWindow.requestFullscreen) {
+                appWindow.requestFullscreen().then(lockLandscape).catch(() => {});
+            }
+        }
+
+        function showControls() {
+            alert('Controls:\nA / D or Left/Right: Move\nW / Up: Jump\nSpace: Slack off\nShift: Sprint\nQ: Dash (if unlocked)\nE: Interact\nP / Esc: Pause\nM: Toggle sound');
+        }
+
+        function showHelp() {
+            alert('Objective:\nComplete Math, ELA, Science, and Gym to unlock the Principal Office.\nBonus subjects unlock no ability, but help you explore the school.');
+        }
+
+        function gameLoop(timestamp) {
+            if (lastFrameTime && timestamp - lastFrameTime < frameInterval) {
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+            lastFrameTime = timestamp;
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
+            lastTimestamp = timestamp;
+
+            if (gameState === 'PLAYING' && !isPaused) {
+                update(dt);
+            }
+            
+            draw();
+
+            if (gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'HOMEWORK' || gameState === 'SHOP' || gameState === 'LEVEL1_COMPLETE' || gameState === 'HOMEWORK_COMPLETE') {
+                requestAnimationFrame(gameLoop);
+            }
+        }
+
+        function update(dt) {
+            gameTime += dt;
+            const difficulty = Math.min(2, 1.25 + gameTime / 120);
+            if (sprintTime > 0) sprintTime = Math.max(0, sprintTime - dt);
+            if (sprintTime === 0) combo = 0; // Reset combo when sprint time is over
+            if (spawnSafeTime > 0) spawnSafeTime = Math.max(0, spawnSafeTime - dt);
+            if (roomBanner.time > 0) roomBanner.time -= dt; // Decrease room banner time
+            updateParticles(dt); // Update particle effects
+            const room = rooms[currentRoomKey];
+
+            // Player movement controls
+            const moveSpeed = player.sprintBoost && sprintTime > 0 ? 430 : (sprintTime > 0 ? 360 : 220); // Adjust move speed based on sprint boost
+            const movingInput = Boolean(keys[keybinds.left] || keys['ArrowLeft'] || keys[keybinds.right] || keys['ArrowRight']);
+            const onFloor = room.platforms.some(platform =>
+                platform.y === 380 && player.y >= platform.y - player.h - 40 && player.y <= platform.y - player.h + 10
+            );
+            if (player.sprinting && sprintTime <= 0 && movingInput) {
+                sprintStamina = Math.max(0, sprintStamina - 28 * dt);
+                if (sprintStamina === 0) {
+                    player.sprinting = false;
+                    player.sprintLocked = true;
+                    document.getElementById('statusText').innerText = 'Sprint exhausted. Hold Slack while still to recover.';
+                }
+            } else if (isSlacking && !movingInput && (player.grounded || onFloor) && sprintTime <= 0) {
+                sprintStamina = Math.min(maxSprintStamina, sprintStamina + 18 * dt);
+                if (player.sprintLocked && sprintStamina >= maxSprintStamina) {
+                    sprintStamina = maxSprintStamina;
+                    player.sprintLocked = false;
+                    document.getElementById('statusText').innerText = 'Sprint stamina full.';
+                }
+            }
+            const normalSpeed = player.sprinting && sprintStamina > 0 ? 300 : moveSpeed;
+            if (player.dashTime > 0) {
+                player.dashTime = Math.max(0, player.dashTime - dt);
+                player.vx = player.dashDirection * 1250;
+            } else if (keys[keybinds.left] || keys['ArrowLeft']) player.vx = -normalSpeed;
+            else if (keys[keybinds.right] || keys['ArrowRight']) player.vx = normalSpeed;
+            else player.vx *= 0.7;
+
+            // Cooldowns
+            if (player.dashCooldown > 0) player.dashCooldown -= dt;
+            if (doorCooldown > 0) doorCooldown -= dt;
+
+            // Gravity
+            player.vy += 1200 * dt;
+
+            // Apply position
+            player.x += player.vx * dt;
+            player.y += player.vy * dt;
+
+            // Room Collisions with Platforms
+            player.grounded = false;
+
+            room.doors.forEach(door => {
+                const accessible = !door.reqAbility || player[door.reqAbility];
+                const nearDoor = Math.abs((player.x + player.w / 2) - (door.x + door.w / 2)) < 90 &&
+                    Math.abs((player.y + player.h / 2) - (door.y + door.h / 2)) < 85;
+                const targetProgress = accessible && nearDoor ? 1 : 0;
+                door.openProgress = (door.openProgress || 0) + (targetProgress - (door.openProgress || 0)) * Math.min(1, dt * 10);
+                door.lockedPulse = Math.max(0, (door.lockedPulse || 0) - dt);
+            });
+
+            room.platforms.forEach(p => {
+                if (player.x + player.w > p.x && player.x < p.x + p.w &&
+                    player.y + player.h >= p.y && player.y + player.h <= p.y + p.h + player.vy * dt) {
+                    player.y = p.y - player.h;
+                    player.vy = 0;
+                    player.grounded = true;
+                }
+            });
+
+            // Canvas Boundary Clamp
+            if (player.x < 0) player.x = 0;
+            const roomWidth = rooms[currentRoomKey].width || canvas.width;
+            if (player.x + player.w > roomWidth) player.x = roomWidth - player.w;
+            const maxCameraX = Math.max(0, roomWidth - canvas.width);
+            const targetCameraX = Math.max(0, Math.min(maxCameraX, player.x - canvas.width * 0.42));
+            cameraX += (targetCameraX - cameraX) * Math.min(1, dt * 8);
+            if (player.y > canvas.height + 80) {
+                currentRoomKey = checkpoint.room;
+                player.x = checkpoint.x;
+                player.y = checkpoint.y;
+                player.vx = 0;
+                player.vy = 0;
+                updateUI();
+            }
+
+            // Door Triggers
+            let changedRoom = false;
+            room.doors.forEach(d => {
+                if (doorCooldown > 0) return;
+                if (player.x + player.w > d.x && player.x < d.x + d.w &&
+                    player.y + player.h > d.y && player.y < d.y + d.h) {
+                    if (!doorIntent) {
+                        document.getElementById('statusText').innerText = `Press ${keyLabel(keybinds.interact)} to use this door.`;
+                        return;
+                    }
+                    
+                    // Ability unlock requirement check
+                    if (d.reqAbility && !player[d.reqAbility]) {
+                        d.lockedPulse = 0.45;
+                        document.getElementById('statusText').innerText = `Locked! ${d.label}`;
+                        return;
+                    }
+
+                    const coreSubjectsComplete = ['Math', 'ELA', 'Science', 'Gym'].every(subject => homeworkDone[subject]);
+                    if (d.reqCore && level === 1 && !coreSubjectsComplete) {
+                        document.getElementById('statusText').innerText = 'Locked! Finish every class worksheet first.';
+                        playTone(110, 0.05);
+                        return;
+                    }
+
+                    const secondFloorComplete = ['History', 'Chemistry', 'MusicClass'].every(subject => homeworkDone[subject]);
+                    if (d.reqSecondFloor && !secondFloorComplete) {
+                        document.getElementById('statusText').innerText = 'Locked! Complete every second-floor class first.';
+                        playTone(110, 0.05);
+                        return;
+                    }
+
+                    if (d.reqLevelSubjects && !activeLevelSubjects.every(subject => homeworkDone[subject])) {
+                        document.getElementById('statusText').innerText = `Locked! Finish all Level ${level} classes first.`;
+                        playTone(110, 0.05);
+                        return;
+                    }
+
+                    // Completing every class opens Level 2 instead of ending the run.
+                    if (d.targetRoom === 'Principal') {
+                        showLevel1Complete();
+                        doorIntent = false;
+                        changedRoom = true;
+                        return;
+                    }
+
+                    if (d.targetRoom === 'Level2Exit') {
+                        currentRoomKey = 'Level2Exit';
+                        player.x = d.targetX;
+                        player.y = d.targetY;
+                        player.vx = 0;
+                        player.vy = 0;
+                        updateUI();
+                        doorIntent = false;
+                        spawnSafeTime = 0.8;
+                        triggerWin();
+                        changedRoom = true;
+                        return;
+                    }
+
+                    if (d.targetRoom === 'FinalExit') {
+                        currentRoomKey = 'FinalExit';
+                        player.x = d.targetX;
+                        player.y = d.targetY;
+                        player.vx = 0;
+                        player.vy = 0;
+                        updateUI();
+                        doorIntent = false;
+                        spawnSafeTime = 0.8;
+                        if (level < 10) advanceLevel();
+                        else triggerWin();
+                        changedRoom = true;
+                        return;
+                    }
+
+                    // Room Transition
+                    currentRoomKey = d.targetRoom;
+                    player.x = d.targetX;
+                    player.y = d.targetY;
+                    player.vx = 0;
+                    player.vy = 0;
+                    spawnSafeTime = 0.8;
+                    doorCooldown = 0.35;
+                    checkpoint = { room: currentRoomKey, x: d.targetX, y: d.targetY };
+                    roomBanner = { text: rooms[currentRoomKey].title, time: 1.8 }; // Show room title in banner
+                    spawnBurst(player.x + player.w / 2, player.y + player.h / 2, '#ffffff', 12); // Added burst effect for checkpoint
+                    updateUI();
+                    doorIntent = false;
+                    changedRoom = true;
+                }
+            });
+
+            if (changedRoom) return;
+
+            collectRoomCoins(room);
+
+            // Level 2 detention monitors patrol faster and one monitor homes in on the player.
+            if (room.enemies) {
+                room.enemies.forEach(enemy => {
+                    if (enemy.chase && Math.abs(player.x - enemy.x) < 300) {
+                        enemy.x += Math.sign(player.x - enemy.x) * 55 * dt;
+                    } else {
+                        enemy.x += enemy.dir * enemy.speed * dt;
+                    }
+                    const enemyLimit = (room.width || canvas.width) - 65;
+                    if (enemy.x < 35 || enemy.x > enemyLimit) enemy.dir *= -1;
+
+                    if (spawnSafeTime <= 0 && player.x < enemy.x + enemy.w && player.x + player.w > enemy.x &&
+                        player.y < enemy.y + enemy.h && player.y + player.h > enemy.y) {
+                        spawnBurst(player.x + player.w / 2, player.y + player.h / 2, '#ff416c', 14); // Added burst effect for game over
+                        triggerGameOver('🚨 A detention monitor caught you in Level 2!');
+                    }
+                });
+            }
+
+            if (room.reporters) {
+                room.reporters.forEach(reporter => {
+                    reporter.x += reporter.dir * reporter.speed * dt;
+                    const reporterLimit = (room.width || canvas.width) - 55;
+                    if (reporter.x < 35 || reporter.x > reporterLimit) reporter.dir *= -1;
+
+                    const nearby = Math.abs((player.x + player.w / 2) - reporter.x) < reporter.range &&
+                        Math.abs((player.y + player.h / 2) - reporter.y) < 75;
+                    if (isSlacking && nearby && !player.canStealth) {
+                        reporter.timer += dt;
+                        if (reporter.timer > 0.7 && !reporter.reported) {
+                            reporter.reported = true;
+                            triggerGameOver('📣 A student reported you for slacking. Timeout!');
+                        }
+                    } else {
+                        reporter.timer = Math.max(0, reporter.timer - dt * 2);
+                        reporter.reported = false;
+                    }
+                });
+            }
+
+            // Slacking Energy Recovery / Sleep Decay
+            if (isSlacking) {
+                energy = Math.min(100, energy + 55 * dt);
+            } else {
+                energy = Math.max(0, energy - 1.25 * dt);
+            }
+
+            if (energy <= 0) {
+                triggerGameOver("😴 You fell asleep in the hallway/classroom!");
+                return;
+            }
+
+            // Teacher Patrol AI Stealth Logic
+            if (room.teacher) {
+                const t = room.teacher;
+                t.timer += dt;
+
+                t.nextDecision ||= 1.5 + Math.random() * 2.5;
+                t.patrolSpeed ||= 30 + Math.random() * 35;
+                t.x += t.dir * t.patrolSpeed * difficulty * dt;
+                const teacherLimit = (room.width || canvas.width) - 60;
+                if (t.x < 60 || t.x > teacherLimit) {
+                    t.x = Math.max(60, Math.min(teacherLimit, t.x));
+                    t.dir = Math.random() < 0.75 ? -Math.sign(t.x - (teacherLimit / 2) || 1) : (Math.random() < 0.5 ? -1 : 1);
+                    t.nextDecision = 0.2 + Math.random() * 1.2;
+                }
+
+                if (t.timer > t.nextDecision) {
+                    const nextState = t.state === 'WRITING'
+                        ? (Math.random() < 0.55 ? 'SUSPICIOUS' : 'LOOKING')
+                        : (t.state === 'LOOKING' && Math.random() < 0.4 ? 'SUSPICIOUS' : 'WRITING');
+                    t.state = nextState;
+                    t.timer = 0;
+                    t.nextDecision = nextState === 'WRITING'
+                        ? 1.2 + Math.random() * 4.2
+                        : (nextState === 'SUSPICIOUS' ? 0.5 + Math.random() * 2.2 : 1 + Math.random() * 3.5);
+                    if (Math.random() < 0.35) t.dir *= -1;
+                    if (Math.random() < 0.25) t.patrolSpeed = 24 + Math.random() * 55;
+                }
+
+                const alertRange = Math.min(t.range * 1.35, t.range * difficulty);
+                if (t.state === 'LOOKING' && isSlacking && !player.canStealth && Math.abs((player.x + player.w / 2) - t.x) < alertRange) {
+                    triggerGameOver("👀 Teacher caught you slacking without a Stealth Hood!");
+                }
+            }
+
+            // Gym Hazard Dodgeballs
+            if (currentRoomKey === 'Gym') {
+                if (!room.balls) room.balls = [];
+                if (Math.random() < 0.04) {
+                    room.balls.push({ x: Math.random() * 700 + 50, y: 0, speed: 200 + Math.random() * 100 });
+                }
+
+                room.balls.forEach(b => {
+                    b.y += b.speed * dt;
+                    if (Math.abs(b.x - player.x) < 25 && Math.abs(b.y - player.y) < 25) {
+                        triggerGameOver("🏀 KO'd by dodgeball in Gym!");
+                    }
+                });
+                room.balls = room.balls.filter(b => b.y < canvas.height);
+            }
+        }
+
+        function draw() {
+            const room = rooms[currentRoomKey] || rooms.Math;
+            if (!rooms[currentRoomKey]) {
+                currentRoomKey = 'Math';
+                cameraX = 0;
+                updateUI();
+            }
+            ctx.fillStyle = room.color;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Notebook Grid Background
+            ctx.strokeStyle = '#e2e8f0';
+            ctx.lineWidth = 1;
+            for (let x = 0; x < canvas.width; x += 30) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+
+            ctx.save();
+            ctx.translate(-cameraX, 0);
+            drawRoomDecor(currentRoomKey);
+            drawClassroomDecor(room);
+
+            // Room Title
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 20px "Comic Sans MS"';
+            ctx.fillText(room.title.toUpperCase(), 30, 40);
+
+            // Draw Platforms
+            ctx.fillStyle = '#8b5a2b';
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 3;
+            room.platforms.forEach(p => {
+                ctx.fillRect(p.x, p.y, p.w, p.h);
+                ctx.strokeRect(p.x, p.y, p.w, p.h);
+            });
+
+            // Draw Doors
+            room.doors.forEach(d => {
+                const openProgress = d.openProgress || 0;
+                const lockedOffset = d.lockedPulse ? Math.sin(gameTime * 55) * d.lockedPulse * 4 : 0;
+                const doorX = d.x + lockedOffset;
+                const panelWidth = d.w * (1 - openProgress) / 2;
+
+                ctx.save();
+                ctx.translate(doorX - d.x, 0);
+                ctx.fillStyle = '#18212b';
+                ctx.fillRect(d.x, d.y, d.w, d.h);
+                ctx.fillStyle = (d.reqAbility && !player[d.reqAbility]) ? '#ff9999' : '#99ff99';
+                if (panelWidth > 0.5) {
+                    ctx.fillRect(d.x, d.y, panelWidth, d.h);
+                    ctx.fillRect(d.x + d.w - panelWidth, d.y, panelWidth, d.h);
+                }
+                ctx.strokeRect(d.x, d.y, d.w, d.h);
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 10px "Comic Sans MS"';
+                ctx.fillText(openProgress > 0.55 ? 'OPEN' : (d.reqAbility ? 'LOCK' : 'DOOR'), d.x + 5, d.y + d.h / 2);
+                ctx.restore();
+            });
+
+            // Draw Homework Desk
+            if (room.desk) {
+                const isDone = homeworkDone[room.desk.subject];
+                ctx.fillStyle = isDone ? '#99cc99' : '#ffcc66';
+                ctx.fillRect(room.desk.x, room.desk.y, room.desk.w, room.desk.h);
+                ctx.strokeRect(room.desk.x, room.desk.y, room.desk.w, room.desk.h);
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 11px "Comic Sans MS"';
+                ctx.fillText(isDone ? '✅ SOLVED' : '📝 WORK', room.desk.x + 5, room.desk.y + 30);
+            }
+
+            // Draw Teacher
+            if (room.teacher) {
+                drawTeacher(room.teacher);
+            }
+
+            if (room.reporters) {
+                room.reporters.forEach(drawReporter);
+            }
+
+            // Draw Gym Dodgeballs
+            if (room.balls) {
+                room.balls.forEach(b => {
+                    ctx.fillStyle = '#ff3300';
+                    ctx.beginPath();
+                    ctx.arc(b.x, b.y, 14, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                });
+            }
+
+            if (room.enemies) drawLevel2Enemies(room.enemies);
+
+            if (room.coins) {
+                room.coins.forEach(coin => {
+                    if (coin.collected) return;
+                    const bob = Math.round(Math.sin(gameTime * 5 + coin.bob) * 3);
+                    ctx.fillStyle = '#ffd43b';
+                    ctx.fillRect(coin.x - 7, coin.y - 12 + bob, 14, 18);
+                    ctx.fillStyle = '#fff3a6';
+                    ctx.fillRect(coin.x - 2, coin.y - 9 + bob, 4, 12);
+                    ctx.strokeStyle = '#000000';
+                    ctx.strokeRect(coin.x - 7, coin.y - 12 + bob, 14, 18);
+                });
+            }
+
+            // Draw Player Stick figure
+            drawPlayerStickman();
+            drawParticles();
+
+            ctx.restore();
+
+            // Draw Energy HUD
+            drawHUD();
+            drawPixelNoise();
+
+            if (roomBanner.time > 0) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.72)';
+                ctx.fillRect(210, 66, 380, 34);
+                ctx.fillStyle = '#fff36b';
+                ctx.font = 'bold 16px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(roomBanner.text, 400, 88);
+                ctx.textAlign = 'left';
+            }
+
+            if (energy < 20 && Math.floor(gameTime * 5) % 2 === 0) {
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.13)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
+
+            if (room.enemies && room.enemies.some(enemy => Math.abs(player.x - enemy.x) < 130)) {
+                ctx.fillStyle = '#ff3355';
+                ctx.font = 'bold 14px monospace';
+                ctx.fillText('!! MONITOR NEARBY !!', 300, 420);
+            }
+
+            if (isPaused) {
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.58)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#ffff66';
+                ctx.font = 'bold 34px monospace';
+                ctx.fillText('PAUSED', 325, 220);
+                ctx.font = 'bold 14px monospace';
+                ctx.fillText('P / ESC TO RESUME', 306, 248);
+            }
+        }
+
+        function drawRoomDecor(roomKey) {
+            ctx.save();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#000000';
+
+            const drawWindow = (x, y, color) => {
+                ctx.fillStyle = '#b9efff';
+                ctx.fillRect(x, y, 110, 65);
+                ctx.strokeRect(x, y, 110, 65);
+                ctx.fillStyle = color;
+                ctx.fillRect(x + 8, y + 8, 94, 49);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(x + 52, y + 8, 6, 49);
+                ctx.fillRect(x + 8, y + 30, 94, 6);
+            };
+
+            const drawPoster = (x, y, color, text) => {
+                ctx.fillStyle = '#fff3a6';
+                ctx.fillRect(x, y, 92, 58);
+                ctx.strokeRect(x, y, 92, 58);
+                ctx.fillStyle = color;
+                ctx.fillRect(x + 9, y + 9, 74, 18);
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 10px monospace';
+                ctx.fillText(text, x + 10, y + 45);
+            };
+
+            const drawLockers = (x, y, count) => {
+                for (let index = 0; index < count; index++) {
+                    ctx.fillStyle = index % 2 ? '#5e7fa3' : '#7698bd';
+                    ctx.fillRect(x + index * 42, y, 36, 100);
+                    ctx.strokeRect(x + index * 42, y, 36, 100);
+                    ctx.fillStyle = '#d7e6f2';
+                    ctx.fillRect(x + 25 + index * 42, y + 48, 5, 5);
+                }
+            };
+
+            if (roomKey === 'Math') {
+                drawWindow(55, 75, '#7ed6ff');
+                drawPoster(640, 75, '#ff6666', 'COUNT IT!');
+                ctx.fillStyle = '#202b45';
+                ctx.fillRect(105, 180, 175, 75);
+                ctx.strokeRect(105, 180, 175, 75);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 15px monospace';
+                ctx.fillText('2 + 2 = 4', 125, 210);
+                ctx.fillText('HOMEWORK', 125, 235);
+            } else if (roomKey === 'ELA') {
+                drawWindow(70, 70, '#d5f4ff');
+                drawPoster(635, 75, '#ff9f43', 'READ!');
+                for (let index = 0; index < 5; index++) {
+                    ctx.fillStyle = index % 2 ? '#9a6645' : '#b77a50';
+                    ctx.fillRect(75 + index * 125, 315, 100, 42);
+                    ctx.strokeRect(75 + index * 125, 315, 100, 42);
+                    ctx.fillStyle = '#ffdb70';
+                    ctx.fillRect(86 + index * 125, 324, 30, 22);
+                }
+            } else if (roomKey === 'HallwayCentral') {
+                drawLockers(70, 65, 6);
+                drawPoster(610, 72, '#7ee081', 'BE KIND');
+                drawPoster(610, 145, '#ffcc66', 'HALL PASS');
+            } else if (roomKey === 'Science') {
+                drawWindow(55, 65, '#a5f0cf');
+                drawPoster(630, 70, '#73d2de', 'SCIENCE!');
+                ctx.fillStyle = '#9b7653';
+                ctx.fillRect(70, 315, 170, 34);
+                ctx.strokeRect(70, 315, 170, 34);
+                ctx.fillStyle = '#8ff0b0';
+                ctx.fillRect(95, 285, 35, 30);
+                ctx.fillStyle = '#ff8c69';
+                ctx.fillRect(155, 275, 28, 40);
+                ctx.strokeRect(95, 285, 35, 30);
+                ctx.strokeRect(155, 275, 28, 40);
+            } else if (roomKey === 'Gym') {
+                drawPoster(65, 70, '#ff6b6b', 'MOVE!');
+                drawPoster(645, 70, '#70d6ff', 'TEAM!');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(80, 330, 640, 6);
+                ctx.fillRect(397, 270, 6, 100);
+            } else if (roomKey === 'Art') {
+                drawWindow(55, 70, '#ffd0ef');
+                drawPoster(625, 70, '#f78fb3', 'CREATE!');
+                ctx.fillStyle = '#ff6b6b';
+                ctx.fillRect(90, 170, 30, 70);
+                ctx.fillStyle = '#ffd93d';
+                ctx.fillRect(125, 155, 30, 85);
+                ctx.fillStyle = '#6bcB77';
+                ctx.fillRect(160, 180, 30, 60);
+                ctx.strokeRect(90, 170, 100, 70);
+            } else if (roomKey === 'Computer') {
+                drawLockers(60, 65, 4);
+                drawPoster(625, 70, '#a78bfa', 'CODE!');
+                for (let index = 0; index < 4; index++) {
+                    ctx.fillStyle = '#30343b';
+                    ctx.fillRect(75 + index * 175, 330, 75, 35);
+                    ctx.strokeRect(75 + index * 175, 330, 75, 35);
+                    ctx.fillStyle = '#62e6a6';
+                    ctx.fillRect(84 + index * 175, 338, 57, 18);
+                }
+            } else if (roomKey === 'Cafeteria') {
+                drawPoster(65, 70, '#ffb347', 'EAT UP!');
+                for (let index = 0; index < 4; index++) {
+                    ctx.fillStyle = '#d58b61';
+                    ctx.fillRect(75 + index * 180, 320, 125, 28);
+                    ctx.strokeRect(75 + index * 180, 320, 125, 28);
+                    ctx.fillStyle = '#ffffff';
+                    ctx.fillRect(92 + index * 180, 310, 12, 10);
+                    ctx.fillRect(116 + index * 180, 310, 12, 10);
+                }
+            } else if (roomKey === 'Music') {
+                drawWindow(60, 70, '#dfc7ff');
+                drawPoster(635, 70, '#c084fc', 'PLAY!');
+                ctx.fillStyle = '#8b5a2b';
+                ctx.fillRect(80, 320, 85, 42);
+                ctx.strokeRect(80, 320, 85, 42);
+                ctx.fillStyle = '#fff4c2';
+                for (let index = 0; index < 4; index++) ctx.fillRect(92 + index * 16, 330, 10, 14);
+            } else if (roomKey === 'Level2Hall') {
+                ctx.fillStyle = '#682c75';
+                ctx.fillRect(0, 65, 800, 14);
+                ctx.fillStyle = '#ff5d73';
+                ctx.fillRect(70, 95, 220, 55);
+                ctx.strokeRect(70, 95, 220, 55);
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 18px monospace';
+                ctx.fillText('DETENTION', 92, 130);
+                drawPoster(610, 75, '#ff5d73', 'RUN!');
+                for (let index = 0; index < 8; index++) {
+                    ctx.fillStyle = index % 2 ? '#ffdd55' : '#222222';
+                    ctx.fillRect(index * 100, 360, 50, 10);
+                }
+            } else if (roomKey === 'SecondFloor') {
+                ctx.fillStyle = '#38627a';
+                ctx.fillRect(0, 65, 1600, 14);
+                drawPoster(220, 85, '#ffb347', 'HISTORY');
+                drawPoster(640, 85, '#73d2de', 'CHEMISTRY');
+                drawPoster(1040, 85, '#c084fc', 'MUSIC');
+                drawPoster(1410, 85, '#63e6be', 'ROOFTOP');
+                for (let index = 0; index < 15; index++) {
+                    ctx.fillStyle = index % 2 ? '#d7e6f2' : '#7698bd';
+                    ctx.fillRect(100 + index * 100, 335, 64, 30);
+                    ctx.strokeRect(100 + index * 100, 335, 64, 30);
+                }
+            } else if (roomKey.startsWith('Level') && roomKey.endsWith('Hub')) {
+                const roomWidth = rooms[roomKey].width || 2700;
+                ctx.fillStyle = '#243b53';
+                ctx.fillRect(0, 65, roomWidth, 14);
+                for (let index = 0; index < roomWidth / 180; index++) {
+                    ctx.fillStyle = index % 2 ? '#d7e6f2' : '#7698bd';
+                    ctx.fillRect(80 + index * 180, 338, 100, 26);
+                    ctx.strokeRect(80 + index * 180, 338, 100, 26);
+                }
+            } else if (roomKey === 'Level2Exit') {
+                drawPoster(330, 75, '#63e6be', 'ESCAPE!');
+                ctx.fillStyle = '#63e6be';
+                ctx.fillRect(285, 235, 230, 38);
+                ctx.strokeRect(285, 235, 230, 38);
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 18px monospace';
+                ctx.fillText('FINAL EXIT', 330, 260);
+            }
+
+            ctx.restore();
+        }
+
+        function drawClassroomDecor(room) {
+            if (!room.desk) return;
+            ctx.save();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#000000';
+            ctx.fillStyle = '#9b7653';
+            const roomWidth = room.width || 800;
+            for (let x = 90; x < roomWidth - 70; x += 150) {
+                ctx.fillRect(x, 330, 92, 22);
+                ctx.strokeRect(x, 330, 92, 22);
+                ctx.fillStyle = Math.floor(x / 150) % 2 ? '#ffdb70' : '#b9efff';
+                ctx.fillRect(x + 12, 318, 30, 12);
+                ctx.fillStyle = '#9b7653';
+            }
+            for (let x = 80; x < roomWidth - 180; x += 420) {
+                ctx.fillStyle = '#fff3a6';
+                ctx.fillRect(x, 75, 220, 78);
+                ctx.strokeRect(x, 75, 220, 78);
+                ctx.fillStyle = '#000000';
+                ctx.font = 'bold 16px monospace';
+                ctx.fillText('CLASS NOTES', x + 18, 102);
+                ctx.font = 'bold 12px monospace';
+                ctx.fillText('STAY AWAKE!', x + 18, 126);
+            }
+            ctx.restore();
+        }
+
+        function drawPixelNoise() {
+            ctx.save();
+            ctx.globalAlpha = 0.08;
+            for (let i = 0; i < 90; i++) {
+                ctx.fillStyle = i % 2 ? '#000000' : '#ffffff';
+                ctx.fillRect(Math.floor(Math.random() * 800 / 4) * 4, Math.floor(Math.random() * 450 / 4) * 4, 2, 2);
+            }
+            ctx.restore();
+        }
+
+        function drawLevel2Enemies(enemies) {
+            enemies.forEach(enemy => {
+                const bob = Math.round(Math.sin(gameTime * 9 + enemy.phase) * 3);
+                const x = Math.round(enemy.x);
+                const y = Math.round(enemy.y + bob);
+                ctx.fillStyle = '#4d1f5f';
+                ctx.fillRect(x, y + 8, enemy.w, 30);
+                ctx.fillStyle = '#ff5d73';
+                ctx.fillRect(x + 3, y, enemy.w - 6, 16);
+                ctx.fillStyle = '#ffff66';
+                ctx.fillRect(x + 7, y + 5, 4, 4);
+                ctx.fillRect(x + enemy.w - 11, y + 5, 4, 4);
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(x + 5, y + 22, enemy.w - 10, 4);
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(x, y + 8, enemy.w, 30);
+            });
+        }
+
+        function drawTeacher(teacher) {
+            const isLooking = teacher.state === 'LOOKING';
+            const isSuspicious = teacher.state === 'SUSPICIOUS';
+            const bob = Math.sin(gameTime * (isLooking ? 10 : 4) + teacher.x * 0.02) * (isLooking ? 2 : 1);
+            const headX = teacher.x;
+            const headY = teacher.y - 14 + bob;
+            const bodyY = teacher.y + 12 + bob;
+            const armAngle = isLooking ? 0.25 : (isSuspicious ? -0.55 : 0.8);
+
+            ctx.save();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#000000';
+            ctx.fillStyle = isLooking ? '#ff4444' : (isSuspicious ? '#ffd166' : '#ffcccc');
+            ctx.beginPath();
+            ctx.arc(headX, headY, 18, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(headX - 14, headY - 20, 28, 5);
+            ctx.fillRect(headX - 9, headY - 25, 18, 6);
+
+            ctx.beginPath();
+            ctx.moveTo(headX, headY + 18);
+            ctx.lineTo(headX, bodyY + 34);
+            ctx.moveTo(headX, bodyY);
+            ctx.lineTo(headX + Math.cos(armAngle) * 24, bodyY + Math.sin(armAngle) * 24);
+            ctx.moveTo(headX, bodyY);
+            ctx.lineTo(headX - Math.cos(armAngle) * 20, bodyY - Math.sin(armAngle) * 20);
+            ctx.moveTo(headX, bodyY + 34);
+            ctx.lineTo(headX - 10, bodyY + 55);
+            ctx.moveTo(headX, bodyY + 34);
+            ctx.lineTo(headX + 10, bodyY + 55);
+            ctx.stroke();
+
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 12px "Comic Sans MS"';
+            ctx.fillText(isLooking ? '!! DETECT !!' : (isSuspicious ? '?? HMM ??' : 'WRITE...'), teacher.x - 30, teacher.y - 42 + bob);
+            ctx.restore();
+        }
+
+        function drawReporter(reporter) {
+            const bob = Math.sin(gameTime * 5 + reporter.x * 0.02) * 1.5;
+            const headY = reporter.y - 18 + bob;
+            ctx.save();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#000000';
+            ctx.fillStyle = reporter.timer > 0 ? '#ffcf56' : '#b9e6ff';
+            ctx.beginPath();
+            ctx.arc(reporter.x, headY, 14, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.fillStyle = '#32506b';
+            ctx.fillRect(reporter.x - 13, headY - 15, 26, 5);
+            ctx.beginPath();
+            ctx.moveTo(reporter.x, headY + 14);
+            ctx.lineTo(reporter.x, reporter.y + 25 + bob);
+            ctx.moveTo(reporter.x, reporter.y - 3 + bob);
+            ctx.lineTo(reporter.x - 16, reporter.y + 9 + bob);
+            ctx.moveTo(reporter.x, reporter.y - 3 + bob);
+            ctx.lineTo(reporter.x + 16, reporter.y + 9 + bob);
+            ctx.moveTo(reporter.x, reporter.y + 25 + bob);
+            ctx.lineTo(reporter.x - 8, reporter.y + 43 + bob);
+            ctx.moveTo(reporter.x, reporter.y + 25 + bob);
+            ctx.lineTo(reporter.x + 8, reporter.y + 43 + bob);
+            ctx.stroke();
+            if (reporter.timer > 0) {
+                ctx.fillStyle = '#d62828';
+                ctx.font = 'bold 11px "Comic Sans MS"';
+                ctx.fillText('REPORT!', reporter.x - 25, headY - 25);
+            }
+            ctx.restore();
+        }
+
+        function drawPlayerStickman() {
+            ctx.save();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#000000';
+
+            const px = player.x + player.w / 2;
+            const isMoving = player.grounded && Math.abs(player.vx) > 12;
+            const isSprinting = player.sprinting || player.sprintBoost || sprintTime > 0;
+            const walkCycle = gameTime * (isSprinting ? 18 : 12);
+            const stride = isMoving ? Math.sin(walkCycle) * (isSprinting ? 12 : 8) : 0;
+            const bob = isMoving ? Math.abs(Math.sin(walkCycle * 0.5)) * 2 : 0;
+            const py = player.y + 15 + bob;
+
+            if ((isSprinting || player.dashTime > 0) && (isMoving || player.dashTime > 0)) {
+                const travelDirection = Math.sign(player.vx) || player.dashDirection || 1;
+                const trailLength = player.dashTime > 0 ? 42 : (isSprinting ? 30 : 20);
+                const trailX = travelDirection > 0 ? px - trailLength : px;
+                ctx.fillStyle = '#7dd3fc';
+                ctx.globalAlpha = 0.75;
+                ctx.fillRect(trailX, py + 18, trailLength * 0.45, 4);
+                ctx.fillRect(trailX + (travelDirection > 0 ? -trailLength * 0.2 : trailLength * 0.35), py + 26, trailLength * 0.65, 4);
+                ctx.globalAlpha = 1;
+            }
+
+            // Head
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(px, py, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+
+            // Face Status
+            ctx.font = '14px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            let emoji = isSlacking ? '🤪' : (energy < 30 ? '😴' : '😇');
+            ctx.fillText(emoji, px, py);
+
+            // Body
+            ctx.beginPath();
+            ctx.moveTo(px, py + 12);
+            ctx.lineTo(px, py + 30);
+            
+            // Arms & Legs
+            ctx.moveTo(px, py + 18);
+            ctx.lineTo(px - 10 - stride * 0.45, py + 26 + Math.abs(stride) * 0.15);
+            ctx.moveTo(px, py + 18);
+            ctx.lineTo(px + 10 + stride * 0.45, py + 26 + Math.abs(stride) * 0.15);
+
+            ctx.moveTo(px, py + 30);
+            ctx.lineTo(px - 8 - stride, py + 42);
+            ctx.moveTo(px, py + 30);
+            ctx.lineTo(px + 8 + stride, py + 42);
+            ctx.stroke();
+
+            if (isSlacking) {
+                ctx.fillStyle = '#ff0055';
+                ctx.font = 'bold 12px "Comic Sans MS"';
+                ctx.fillText("🎉 SLACKING!", px - 30, py - 20);
+            }
+
+            ctx.restore();
+        }
+
+        function drawHUD() {
+            const energyPercent = Math.round((energy / maxEnergy) * 100);
+            const staminaPercent = Math.round((sprintStamina / maxSprintStamina) * 100);
+            const energyColor = energyPercent > 60 ? '#28c76f' : (energyPercent > 30 ? '#ffd43b' : '#ff4d4f');
+            const staminaColor = staminaPercent > 45 ? '#36a3ff' : (staminaPercent > 15 ? '#ff9f43' : '#b66dff');
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 14px "Comic Sans MS"';
+            ctx.fillText(`AWAKE ENERGY: ${energyPercent}%`, 580, 25);
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 12px "Comic Sans MS"';
+            const core = [homeworkDone.Math, homeworkDone.ELA, homeworkDone.Science, homeworkDone.Gym].filter(Boolean).length;
+            ctx.fillText(`CORE CLASSES: ${core}/4`, 30, 425);
+
+            ctx.fillStyle = '#e0e0e0';
+            ctx.fillRect(580, 35, 180, 18);
+            
+            ctx.fillStyle = energyColor;
+            ctx.fillRect(580, 35, Math.max(0, energyPercent * 1.8), 18);
+            
+            ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(580, 35, 180, 18);
+
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 12px "Comic Sans MS"';
+            ctx.fillText(`SPRINT STAMINA: ${staminaPercent}%${player.sprintLocked ? ' RECOVER' : ''}`, 580, 68);
+            ctx.fillStyle = '#e0e0e0';
+            ctx.fillRect(580, 76, 180, 12);
+            ctx.fillStyle = staminaColor;
+            ctx.fillRect(580, 76, staminaPercent * 1.8, 12);
+            ctx.strokeStyle = '#000000';
+            ctx.strokeRect(580, 76, 180, 12);
+        }
+
+        loadOptions();
+        updateKeybindLabels();
+        applyOptions();
+        setupJoystick();
+        draw();
+    </script>
+</body>
+</html>
