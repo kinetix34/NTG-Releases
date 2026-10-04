@@ -1831,8 +1831,7 @@
                         difficulty: document.getElementById('difficultyOption').value
                     })
                 });
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'Could not make a room.');
+                const data = await readMultiplayerResponse(response, 'Could not make a room.');
                 connectToMultiplayerRoom(data, name, 'host');
                 document.getElementById('multiplayerDirectoryModal').classList.add('hidden');
                 document.getElementById('multiplayerMenuStatus').innerText = `${data.gameName} room ${data.code} created. Click Invite to share the code.`;
@@ -1857,8 +1856,7 @@
             status.innerText = 'Refreshing games and open rooms...';
             try {
                 const response = await fetch('/api/directory');
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'Could not load the multiplayer directory.');
+                const data = await readMultiplayerResponse(response, 'Could not load the multiplayer directory.');
 
                 const gameList = document.getElementById('multiplayerGameList');
                 gameList.replaceChildren(...data.games.map(game => {
@@ -1933,8 +1931,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, code })
                 });
-                const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'Could not join room.');
+                const data = await readMultiplayerResponse(response, 'Could not join room.');
                 connectToMultiplayerRoom(data, name, 'guest');
                 document.getElementById('multiplayerMenuStatus').innerText = `Joined room ${data.code}.`;
             } catch (error) {
@@ -1979,6 +1976,21 @@
                     document.getElementById('multiplayerHostStatus').innerText = 'Reconnecting to room updates...';
                 }
             };
+        }
+
+        async function readMultiplayerResponse(response, fallbackMessage) {
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.toLowerCase().includes('application/json')) {
+                throw new Error('This address returned a web page instead of the multiplayer API. Run `node Multiplayer/server.js` and open `http://localhost:3000`.');
+            }
+            let data;
+            try {
+                data = await response.json();
+            } catch (error) {
+                throw new Error('The multiplayer server returned invalid JSON. Restart it with `node Multiplayer/server.js`.');
+            }
+            if (!response.ok) throw new Error(data.error || fallbackMessage);
+            return data;
         }
 
         function updateMultiplayerHud() {

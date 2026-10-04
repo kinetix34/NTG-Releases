@@ -7,3 +7,4 @@ Added Skyline Scramble. Host a game to play!!
 
 ## Multiplayer
 Online co-op supports up to 5 players. Fixed some lag, made a multiplayer menu to see all avalible games. 
+Critical update - multiplayer bug fix. Sorry! i will push upd 5/5 tonight hopefully.
