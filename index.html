@@ -526,6 +526,8 @@
 
             <div id="multiplayerHud" class="hidden absolute bottom-3 right-3 z-10 bg-white border-2 border-black px-2 py-1 shadow-[3px_3px_0_#000] text-xs font-black">
                 <span id="multiplayerRoomLabel"></span>
+                <span id="multiplayerArenaStatus" class="ml-2 text-cyan-800"></span>
+                <span id="buddyBoostStatus" class="ml-2 text-green-700"></span>
                 <button id="multiplayerInviteBtn" onclick="toggleMultiplayerPanel()" title="Open connection invitations" class="paint-button ml-2 px-2 py-1 bg-cyan-300 text-xs">INVITE</button>
                 <button onclick="leaveMultiplayer()" title="Leave multiplayer room" class="paint-button ml-2 px-2 py-1 bg-red-300 text-xs">LEAVE</button>
             </div>
@@ -547,6 +549,26 @@
                     <h3 class="font-black mt-3">PLAYERS</h3>
                     <ul id="multiplayerPlayerList" class="border-2 border-black bg-white p-2 text-sm font-bold min-h-12"></ul>
                     <p id="multiplayerHostStatus" class="text-xs font-bold mt-2 min-h-4"></p>
+                </div>
+            </div>
+
+            <div id="multiplayerDirectoryModal" class="hidden absolute inset-0 z-40 bg-black/70 flex items-center justify-center p-3">
+                <div class="bg-cyan-50 border-4 border-black p-4 w-full max-w-2xl max-h-full overflow-y-auto shadow-[8px_8px_0_#000] text-left">
+                    <div class="flex justify-between items-center border-b-4 border-black pb-2 mb-3">
+                        <div>
+                            <h2 class="text-xl font-black">MULTIPLAYER DIRECTORY</h2>
+                            <p class="text-xs font-bold">Choose a game or join an open room.</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="refreshMultiplayerDirectory()" class="paint-button px-3 py-1 bg-blue-300 font-black">REFRESH</button>
+                            <button onclick="closeMultiplayerDirectory()" class="paint-button px-3 py-1 bg-red-300 font-black">CLOSE</button>
+                        </div>
+                    </div>
+                    <h3 class="font-black mb-2">AVAILABLE GAMES</h3>
+                    <div id="multiplayerGameList" class="grid sm:grid-cols-2 gap-2 mb-4"></div>
+                    <h3 class="font-black mb-2">OPEN ROOMS</h3>
+                    <ul id="multiplayerOpenRooms" class="grid gap-2"></ul>
+                    <p id="multiplayerDirectoryStatus" class="text-xs font-bold mt-2 min-h-4"></p>
                 </div>
             </div>
 
@@ -572,11 +594,15 @@
                     <p class="text-xs font-bold mb-2">Create a room, share its code, and join up to 4 friends.</p>
                     <label class="block text-xs font-black mb-1" for="multiplayerName">Player name</label>
                     <input id="multiplayerName" class="multiplayer-input w-full mb-2" maxlength="16" autocomplete="nickname" placeholder="Your name">
+                    <div class="grid grid-cols-2 gap-2 mb-2">
+                        <button onclick="createMultiplayerRoom('school')" class="paint-button px-2 py-2 bg-green-300 font-black text-xs">HOST SCHOOL</button>
+                        <button onclick="createMultiplayerRoom('skyline')" class="paint-button px-2 py-2 bg-yellow-300 font-black text-xs">HOST SKYLINE SCRAMBLE</button>
+                    </div>
                     <div class="flex gap-2">
-                        <button onclick="createMultiplayerRoom()" class="paint-button flex-1 px-2 py-2 bg-green-300 font-black text-xs">MAKE A ROOM</button>
                         <input id="multiplayerCode" class="multiplayer-input w-24 text-center uppercase" maxlength="5" placeholder="CODE" aria-label="Room code">
                         <button onclick="joinMultiplayerRoom()" class="paint-button flex-1 px-2 py-2 bg-blue-300 font-black text-xs">JOIN</button>
                     </div>
+                    <button onclick="openMultiplayerDirectory()" class="paint-button mt-2 w-full px-2 py-2 bg-cyan-300 font-black text-xs">BROWSE MULTIPLAYER GAMES</button>
                     <p id="multiplayerMenuStatus" class="text-xs font-bold mt-2 min-h-4">Create a room or enter a friend's 5-character code.</p>
                 </div>
 
@@ -680,6 +706,8 @@
                     </div>
                     <div class="space-y-2 text-sm font-bold">
                         <p><strong>Mobile:</strong> Responsive landscape controls, joystick dead zone, pointer-safe input, and a full-screen homework layout.</p>
+                        <p><strong>Co-op:</strong> Five-player rooms use pushed position updates while game rules stay local. Link up for a speed/energy boost and bonus coins; nearby teammates can rescue you once per minute.</p>
+                        <p><strong>Multiplayer Games:</strong> Browse open rooms or host School Co-op and Skyline Scramble. Skyline adds spring pads, boost rails, crumble blocks, local powerups, animated drones, and a prism-locked finish gate.</p>
                         <p><strong>Movement:</strong> Independent sprint stamina, recovery, stronger dash, animated player trails, and dynamic energy colors.</p>
                         <p><strong>World:</strong> Levels 1-10, longer side-scrolling wings, randomized classes, teachers, reporters, and classroom decor.</p>
                         <p><strong>Flow:</strong> Current-level retries, explicit door interaction, level completion navigation, and pause/menu controls.</p>
@@ -955,9 +983,15 @@
         let remotePlayers = [];
         let networkWorldSeed = 0;
         let nextNetworkSend = 0;
-        let nextNetworkPoll = 0;
         let networkSendBusy = false;
-        let networkPollBusy = false;
+        let lastNetworkStateSent = null;
+        let lastNetworkSendTime = 0;
+        let buddyNearby = false;
+        let lastBuddyRescue = 0;
+        let skylinePowerups = { turbo: 0, highJump: 0, shield: 0 };
+        let skylineCrystals = 0;
+        let skylineScore = 0;
+        let skylineHudText = '';
         const optionsStorageKey = 'ntg-options';
         const keybinds = {
             left: 'ArrowLeft',
@@ -1242,6 +1276,37 @@
             FinalExit: {
                 title: 'FINAL EXIT', color: '#eaffd8', doors: [],
                 platforms: [{ x: 0, y: 380, w: 800, h: 70 }, { x: 250, y: 290, w: 300, h: 20 }],
+                desk: null, teacher: null, enemies: []
+            },
+            MultiplayerArena: {
+                title: 'SKYLINE SCRAMBLE', color: '#b8edff', width: 2400, doors: [],
+                platforms: [
+                    { x: 0, y: 380, w: 2400, h: 70, surface: 'floor' },
+                    { x: 200, y: 315, w: 150, h: 18, surface: 'spring' },
+                    { x: 455, y: 270, w: 160, h: 18, surface: 'boost', direction: 1 },
+                    { x: 720, y: 215, w: 145, h: 18, surface: 'crumble' },
+                    { x: 960, y: 300, w: 140, h: 18, surface: 'spring' },
+                    { x: 1200, y: 245, w: 170, h: 18, surface: 'boost', direction: -1 },
+                    { x: 1485, y: 185, w: 150, h: 18, surface: 'crumble' },
+                    { x: 1730, y: 275, w: 170, h: 18, surface: 'spring' },
+                    { x: 2000, y: 215, w: 150, h: 18, surface: 'boost', direction: 1 }
+                ],
+                pickups: [
+                    { type: 'turbo', x: 485, y: 230, respawn: 0, active: true },
+                    { type: 'high-jump', x: 1005, y: 260, respawn: 0, active: true },
+                    { type: 'shield', x: 1560, y: 145, respawn: 0, active: true }
+                ],
+                crystals: [
+                    { x: 390, y: 295, collected: false },
+                    { x: 820, y: 175, collected: false },
+                    { x: 1330, y: 205, collected: false },
+                    { x: 1810, y: 235, collected: false }
+                ],
+                hazards: [
+                    { x: 640, y: 342, w: 34, h: 28, minX: 590, maxX: 900, speed: 115, direction: 1, phase: 0 },
+                    { x: 1510, y: 330, w: 34, h: 28, minX: 1410, maxX: 1740, speed: 135, direction: -1, phase: 2 }
+                ],
+                goal: { x: 2260, y: 285, w: 54, h: 95 },
                 desk: null, teacher: null, enemies: []
             }
         };
@@ -1572,6 +1637,10 @@
         }
 
         function setupSelectedLevel() {
+            if (multiplayerSession?.gameId === 'skyline') {
+                setupSkylineArena();
+                return;
+            }
             level = selectedLevel;
             resetTroubleMeter();
             if (level === 1) {
@@ -1595,6 +1664,55 @@
             cameraX = 0;
             doorCooldown = 0.8;
             spawnSafeTime = 1.25;
+        }
+
+        function setupSkylineArena() {
+            const room = rooms.MultiplayerArena;
+            room.platforms.forEach(platform => {
+                platform.crumbling = false;
+                platform.crumbleTimer = 0;
+                platform.brokenUntil = 0;
+            });
+            room.pickups.forEach(pickup => {
+                pickup.active = true;
+                pickup.respawn = 0;
+            });
+            room.crystals.forEach(crystal => { crystal.collected = false; });
+            room.hazards.forEach(hazard => {
+                hazard.startX ??= hazard.x;
+                hazard.startDirection ??= hazard.direction;
+                hazard.x = hazard.startX;
+                hazard.direction = hazard.startDirection;
+            });
+            skylinePowerups = { turbo: 0, highJump: 0, shield: 0 };
+            skylineCrystals = 0;
+            skylineScore = 0;
+            skylineHudText = '';
+            resetLevelObjectives([]);
+            resetTroubleMeter();
+            level = 1;
+            currentRoomKey = 'MultiplayerArena';
+            energy = maxEnergy;
+            sprintStamina = maxSprintStamina;
+            player.canDoubleJump = false;
+            player.canStealth = false;
+            player.canDash = false;
+            player.hasMasterKey = false;
+            player.sprintLocked = false;
+            player.sprinting = false;
+            player.x = 90;
+            player.y = 300;
+            player.vx = 0;
+            player.vy = 0;
+            player.grounded = false;
+            player.doubleJumpsLeft = 0;
+            player.dashCooldown = 0;
+            player.dashTime = 0;
+            cameraX = 0;
+            checkpoint = { room: currentRoomKey, x: player.x, y: player.y };
+            doorCooldown = 0.8;
+            spawnSafeTime = 1.25;
+            roomCoinsInitialized = false;
         }
 
         function startGame() {
@@ -1635,53 +1753,80 @@
                 y: player.y,
                 room: currentRoomKey,
                 level,
-                slacking: isSlacking,
-                moving: Math.abs(player.vx) > 12,
-                done: Object.keys(homeworkDone).filter(subject => homeworkDone[subject]),
-                abilities: {
-                    canDoubleJump: player.canDoubleJump,
-                    canStealth: player.canStealth,
-                    canDash: player.canDash,
-                    hasMasterKey: player.hasMasterKey
-                }
+                moving: Math.abs(player.vx) > 12
             };
         }
 
-        function updateRemoteRoster(players) {
-            multiplayerPlayers = Array.isArray(players) ? players : [];
-            remotePlayers = multiplayerPlayers.filter(remote => remote.id !== multiplayerSession?.playerId);
-            let progressChanged = false;
+        function getNearbyTeammate(maxDistance = 140) {
+            if (!multiplayerSession) return null;
+            const now = Date.now();
+            return remotePlayers.find(remote => {
+                const state = remote.state;
+                return state && state.level === level && state.room === currentRoomKey &&
+                    now - state.updatedAt < 15000 &&
+                    Math.hypot((player.x + player.w / 2) - (state.x + 12), (player.y + player.h / 2) - (state.y + 20)) <= maxDistance;
+            }) || null;
+        }
+
+        function updateRemoteAnimation(dt) {
             remotePlayers.forEach(remote => {
-                if (!remote.state || remote.state.level !== level) return;
-                (remote.state.done || []).forEach(subject => {
-                    if (!homeworkDone[subject]) {
-                        homeworkDone[subject] = true;
-                        progressChanged = true;
-                    }
-                });
-                const abilities = remote.state.abilities || {};
-                ['canDoubleJump', 'canStealth', 'canDash', 'hasMasterKey'].forEach(ability => {
-                    if (abilities[ability] && !player[ability]) {
-                        player[ability] = true;
-                        progressChanged = true;
-                    }
-                });
+                if (!remote.state) return;
+                const interpolation = Math.min(1, dt * 14);
+                remote.renderX += (remote.state.x - remote.renderX) * interpolation;
+                remote.renderY += (remote.state.y - remote.renderY) * interpolation;
             });
-            if (progressChanged) updateUI();
+        }
+
+        function updateRemoteRoster(players) {
+            const previousPlayers = new Map(multiplayerPlayers.map(remote => [remote.id, remote]));
+            multiplayerPlayers = (Array.isArray(players) ? players : []).map(remote => {
+                const previous = previousPlayers.get(remote.id);
+                const state = remote.state || previous?.state || null;
+                return {
+                    ...remote,
+                    state,
+                    moveDirection: previous?.state && state ? Math.sign(state.x - previous.state.x) || previous.moveDirection : (remote.moveDirection || -1),
+                    renderX: previous?.state ? previous.renderX : (state?.x ?? 0),
+                    renderY: previous?.state ? previous.renderY : (state?.y ?? 0)
+                };
+            });
+            remotePlayers = multiplayerPlayers.filter(remote => remote.id !== multiplayerSession?.playerId);
             updateMultiplayerHud();
         }
 
-        async function createMultiplayerRoom() {
+        function updateRemotePlayer(remote) {
+            if (!remote?.id || !remote.state) return;
+            const index = multiplayerPlayers.findIndex(playerState => playerState.id === remote.id);
+            const current = index >= 0 ? multiplayerPlayers[index] : null;
+            const nextPlayer = {
+                ...remote,
+                moveDirection: current?.state ? Math.sign(remote.state.x - current.state.x) || current.moveDirection : (remote.moveDirection || -1),
+                renderX: current?.state ? current.renderX : remote.state.x,
+                renderY: current?.state ? current.renderY : remote.state.y
+            };
+            if (index < 0) multiplayerPlayers.push(nextPlayer);
+            else multiplayerPlayers[index] = nextPlayer;
+            remotePlayers = multiplayerPlayers.filter(playerState => playerState.id !== multiplayerSession?.playerId);
+        }
+
+        function rescueNearbyGameOverPlayer() {
+            if (gameState === 'GAMEOVER' && multiplayerSession && Date.now() - lastBuddyRescue >= 60000 && getNearbyTeammate()) {
+                rescueWithTeammate();
+            }
+        }
+
+        async function createMultiplayerRoom(gameId = 'school') {
             const name = getMultiplayerName();
             if (!name) return;
             selectedLevel = Number(document.getElementById('levelOption').value) || selectedLevel;
-            document.getElementById('multiplayerMenuStatus').innerText = 'Making a room...';
+            document.getElementById('multiplayerMenuStatus').innerText = `Making ${gameId === 'skyline' ? 'Skyline Scramble' : 'School Co-op'} room...`;
             try {
                 const response = await fetch('/api/rooms', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         name,
+                        gameId,
                         level: selectedLevel,
                         difficulty: document.getElementById('difficultyOption').value
                     })
@@ -1689,11 +1834,85 @@
                 const data = await response.json();
                 if (!response.ok) throw new Error(data.error || 'Could not make a room.');
                 connectToMultiplayerRoom(data, name, 'host');
-                document.getElementById('multiplayerMenuStatus').innerText = `Room ${data.code} created. Click Invite to share the code.`;
+                document.getElementById('multiplayerDirectoryModal').classList.add('hidden');
+                document.getElementById('multiplayerMenuStatus').innerText = `${data.gameName} room ${data.code} created. Click Invite to share the code.`;
             } catch (error) {
                 document.getElementById('multiplayerMenuStatus').innerText = window.location.protocol === 'file:'
                     ? 'Open http://localhost:3000 after starting the room server with node.'
                     : (error.message || 'Could not reach the room server.');
+            }
+        }
+
+        function openMultiplayerDirectory() {
+            document.getElementById('multiplayerDirectoryModal').classList.remove('hidden');
+            refreshMultiplayerDirectory();
+        }
+
+        function closeMultiplayerDirectory() {
+            document.getElementById('multiplayerDirectoryModal').classList.add('hidden');
+        }
+
+        async function refreshMultiplayerDirectory() {
+            const status = document.getElementById('multiplayerDirectoryStatus');
+            status.innerText = 'Refreshing games and open rooms...';
+            try {
+                const response = await fetch('/api/directory');
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Could not load the multiplayer directory.');
+
+                const gameList = document.getElementById('multiplayerGameList');
+                gameList.replaceChildren(...data.games.map(game => {
+                    const card = document.createElement('section');
+                    card.className = 'border-2 border-black bg-white p-3';
+                    const title = document.createElement('h4');
+                    title.className = 'font-black';
+                    title.textContent = game.name;
+                    const description = document.createElement('p');
+                    description.className = 'text-xs font-bold min-h-8';
+                    description.textContent = game.description;
+                    const button = document.createElement('button');
+                    button.className = 'paint-button mt-2 w-full px-2 py-2 bg-green-300 font-black text-xs';
+                    button.textContent = `HOST ${game.name.toUpperCase()}`;
+                    button.onclick = () => createMultiplayerRoom(game.id);
+                    card.append(title, description, button);
+                    return card;
+                }));
+
+                const roomList = document.getElementById('multiplayerOpenRooms');
+                const openRooms = data.rooms.filter(room => room.playerCount < room.maxPlayers);
+                if (openRooms.length === 0) {
+                    const empty = document.createElement('li');
+                    empty.className = 'border-2 border-dashed border-black bg-white p-3 text-sm font-bold';
+                    empty.textContent = 'No open rooms yet. Host a game to start one.';
+                    roomList.replaceChildren(empty);
+                } else {
+                    roomList.replaceChildren(...openRooms.map(room => {
+                        const item = document.createElement('li');
+                        item.className = 'flex items-center gap-3 border-2 border-black bg-white p-3';
+                        const details = document.createElement('div');
+                        details.className = 'min-w-0 flex-1';
+                        const title = document.createElement('p');
+                        title.className = 'font-black';
+                        title.textContent = room.gameName;
+                        const subtitle = document.createElement('p');
+                        subtitle.className = 'text-xs font-bold';
+                        subtitle.textContent = `${room.hostName} | ${room.code} | ${room.playerCount}/${room.maxPlayers}`;
+                        details.append(title, subtitle);
+                        const button = document.createElement('button');
+                        button.className = 'paint-button px-3 py-2 bg-blue-300 font-black text-xs';
+                        button.textContent = 'JOIN';
+                        button.onclick = () => {
+                            document.getElementById('multiplayerCode').value = room.code;
+                            closeMultiplayerDirectory();
+                            joinMultiplayerRoom();
+                        };
+                        item.append(details, button);
+                        return item;
+                    }));
+                }
+                status.innerText = `${data.games.length} games | ${openRooms.length} open rooms`;
+            } catch (error) {
+                status.innerText = error.message || 'Could not load the multiplayer directory.';
             }
         }
 
@@ -1726,7 +1945,7 @@
         }
 
         function connectToMultiplayerRoom(data, name, role) {
-            multiplayerSession = { role, code: data.code, playerId: data.playerId, name };
+            multiplayerSession = { role, code: data.code, playerId: data.playerId, name, gameId: data.gameId || 'school', gameName: data.gameName || 'School Co-op' };
             networkWorldSeed = Number(data.worldSeed) || 0;
             selectedLevel = Number(data.level) || selectedLevel;
             difficulty = data.difficulty || difficulty;
@@ -1734,7 +1953,32 @@
             document.getElementById('difficultyOption').value = difficulty;
             document.getElementById('multiplayerCode').value = data.code;
             updateRemoteRoster(data.players || []);
+            lastNetworkStateSent = null;
+            lastNetworkSendTime = 0;
             startGame();
+            connectToRoomEvents(multiplayerSession);
+        }
+
+        function connectToRoomEvents(session) {
+            const query = new URLSearchParams({ code: session.code, playerId: session.playerId });
+            const events = new EventSource(`/api/room/events?${query}`);
+            session.events = events;
+            events.onmessage = event => {
+                if (multiplayerSession !== session) return;
+                try {
+                    const update = JSON.parse(event.data);
+                    if (update.type === 'roster') updateRemoteRoster(update.players);
+                    else if (update.type === 'player') updateRemotePlayer(update.player);
+                    rescueNearbyGameOverPlayer();
+                } catch (error) {
+                    document.getElementById('multiplayerMenuStatus').innerText = 'Received an invalid room update.';
+                }
+            };
+            events.onerror = () => {
+                if (multiplayerSession === session) {
+                    document.getElementById('multiplayerHostStatus').innerText = 'Reconnecting to room updates...';
+                }
+            };
         }
 
         function updateMultiplayerHud() {
@@ -1747,6 +1991,7 @@
             document.getElementById('multiplayerRoomLabel').innerText = `ROOM ${multiplayerSession.code} | ${count}/5`;
             document.getElementById('multiplayerModalRoom').innerText = `ROOM ${multiplayerSession.code} | ${count}/5 players`;
             document.getElementById('multiplayerInviteCode').innerText = multiplayerSession.code;
+            document.getElementById('multiplayerArenaStatus').classList.toggle('hidden', multiplayerSession.gameId !== 'skyline');
             document.getElementById('multiplayerInviteBtn').classList.toggle('hidden', multiplayerSession.role !== 'host');
             const list = document.getElementById('multiplayerPlayerList');
             list.replaceChildren(...multiplayerPlayers.map(remote => {
@@ -1758,12 +2003,31 @@
                 return item;
             }));
             hud.classList.remove('hidden');
+            updateSkylineHud(true);
+        }
+
+        function updateSkylineHud(force = false) {
+            const status = document.getElementById('multiplayerArenaStatus');
+            if (!multiplayerSession || multiplayerSession.gameId !== 'skyline') {
+                status.innerText = '';
+                return;
+            }
+            const active = [];
+            if (skylinePowerups.turbo > 0) active.push(`TURBO ${Math.ceil(skylinePowerups.turbo)}s`);
+            if (skylinePowerups.highJump > 0) active.push(`HOP ${Math.ceil(skylinePowerups.highJump)}s`);
+            if (skylinePowerups.shield > 0) active.push(`SHIELD ${Math.ceil(skylinePowerups.shield)}s`);
+            const nextText = `PRISMS ${skylineCrystals}/4 | SCORE ${skylineScore}${active.length ? ` | ${active.join(' ')}` : ''}`;
+            if (!force && nextText === skylineHudText) return;
+            skylineHudText = nextText;
+            status.innerText = skylineHudText;
         }
 
         function clearMultiplayerSession() {
+            multiplayerSession?.events?.close();
             multiplayerSession = null;
             multiplayerPlayers = [];
             remotePlayers = [];
+            lastNetworkStateSent = null;
             updateMultiplayerHud();
         }
 
@@ -1771,6 +2035,7 @@
             const session = multiplayerSession;
             if (!session) return;
             multiplayerSession = null;
+            session.events?.close();
             const body = JSON.stringify({ code: session.code, playerId: session.playerId });
             if (unloading && navigator.sendBeacon) {
                 navigator.sendBeacon('/api/leave', new Blob([body], { type: 'application/json' }));
@@ -1784,6 +2049,7 @@
             }
             multiplayerPlayers = [];
             remotePlayers = [];
+            lastNetworkStateSent = null;
             updateMultiplayerHud();
         }
 
@@ -1796,38 +2062,28 @@
             const session = multiplayerSession;
             if (!session) return;
             const now = Date.now();
-            if (now >= nextNetworkSend && !networkSendBusy) {
-                nextNetworkSend = now + 100;
-                networkSendBusy = true;
-                fetch('/api/state', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ code: session.code, playerId: session.playerId, state: getNetworkState() })
-                }).then(response => {
-                    if (response.status === 404) throw new Error('Room ended. Make or join another room.');
-                }).catch(error => {
-                    if (multiplayerSession !== session) return;
-                    document.getElementById('multiplayerMenuStatus').innerText = error.message || 'Room connection lost.';
-                    clearMultiplayerSession();
-                }).finally(() => { networkSendBusy = false; });
-            }
+            if (now < nextNetworkSend || networkSendBusy) return;
+            const state = getNetworkState();
+            const previous = lastNetworkStateSent;
+            const changed = !previous || Math.abs(state.x - previous.x) > 1 || Math.abs(state.y - previous.y) > 1 ||
+                state.room !== previous.room || state.level !== previous.level || state.moving !== previous.moving;
+            if (!changed && now - lastNetworkSendTime < 5000) return;
 
-            if (now >= nextNetworkPoll && !networkPollBusy) {
-                nextNetworkPoll = now + 350;
-                networkPollBusy = true;
-                const query = new URLSearchParams({ code: session.code, playerId: session.playerId });
-                fetch(`/api/room?${query}`).then(async response => {
-                    const data = await response.json();
-                    if (!response.ok) throw new Error(data.error || 'Room session ended.');
-                    if (multiplayerSession !== session) return;
-                    updateRemoteRoster(data.players);
-                    document.getElementById('multiplayerHostStatus').innerText = `${data.players.length}/5 players connected.`;
-                }).catch(error => {
-                    if (multiplayerSession !== session) return;
-                    document.getElementById('multiplayerMenuStatus').innerText = error.message || 'Room connection lost.';
-                    clearMultiplayerSession();
-                }).finally(() => { networkPollBusy = false; });
-            }
+            nextNetworkSend = now + 120;
+            networkSendBusy = true;
+            lastNetworkStateSent = state;
+            lastNetworkSendTime = now;
+            fetch('/api/state', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ code: session.code, playerId: session.playerId, state })
+            }).then(response => {
+                if (response.status === 404) throw new Error('Room ended. Make or join another room.');
+            }).catch(error => {
+                if (multiplayerSession !== session) return;
+                document.getElementById('multiplayerMenuStatus').innerText = error.message || 'Room connection lost.';
+                clearMultiplayerSession();
+            }).finally(() => { networkSendBusy = false; });
         }
 
         window.addEventListener('beforeunload', () => {
@@ -1918,6 +2174,19 @@
         }
 
         function restartGame() {
+            if (multiplayerSession?.gameId === 'skyline') {
+                gameState = 'GAMEOVER';
+                isPaused = false;
+                keys = {};
+                doorIntent = false;
+                lastTimestamp = 0;
+                lastFrameTime = 0;
+                particles = [];
+                roomBanner = { text: '', time: 0 };
+                setupSkylineArena();
+                startGame();
+                return;
+            }
             const retryLevel = level;
             const retrySubjects = [...activeLevelSubjects];
             const retryAbilities = {
@@ -2362,13 +2631,91 @@
             room.coins.forEach(coin => {
                 if (!coin.collected && Math.abs((player.x + player.w / 2) - coin.x) < 24 && Math.abs((player.y + player.h / 2) - coin.y) < 30) {
                     coin.collected = true;
-                    coins++;
+                    const coinReward = buddyNearby ? 2 : 1;
+                    coins += coinReward;
                     combo++;
                     spawnBurst(coin.x, coin.y, '#ffd43b', 10); // Added burst effect for coin collection
-                    roomBanner = { text: combo > 1 ? `COIN COMBO x${combo}!` : 'COIN GET!', time: 1.2 };
+                    roomBanner = { text: buddyNearby ? `BUDDY BONUS +${coinReward}!` : (combo > 1 ? `COIN COMBO x${combo}!` : 'COIN GET!'), time: 1.2 };
                     playTone(980, 0.05);
                 }
             });
+        }
+
+        function updateSkylineArena(dt, room) {
+            if (multiplayerSession?.gameId !== 'skyline' || currentRoomKey !== 'MultiplayerArena') return false;
+            const scoreBefore = skylineScore;
+
+            Object.keys(skylinePowerups).forEach(type => {
+                skylinePowerups[type] = Math.max(0, skylinePowerups[type] - dt);
+            });
+
+            room.platforms.forEach(platform => {
+                if (platform.crumbling) {
+                    platform.crumbleTimer -= dt;
+                    if (platform.crumbleTimer <= 0) {
+                        platform.crumbling = false;
+                        platform.brokenUntil = 2.8;
+                    }
+                } else if (platform.brokenUntil > 0) {
+                    platform.brokenUntil = Math.max(0, platform.brokenUntil - dt);
+                }
+            });
+
+            room.pickups.forEach(pickup => {
+                if (!pickup.active) {
+                    pickup.respawn -= dt;
+                    if (pickup.respawn <= 0) pickup.active = true;
+                    return;
+                }
+                if (Math.hypot((player.x + player.w / 2) - pickup.x, (player.y + player.h / 2) - pickup.y) > 30) return;
+
+                pickup.active = false;
+                pickup.respawn = 14;
+                skylinePowerups[pickup.type] = pickup.type === 'shield' ? 12 : 8;
+                skylineScore += 50;
+                const color = pickup.type === 'turbo' ? '#46e6ff' : (pickup.type === 'highJump' ? '#ff5edb' : '#ffe66d');
+                spawnBurst(pickup.x, pickup.y, color, 18);
+                roomBanner = { text: `${pickup.type.toUpperCase().replace('-', ' ')} POWERUP!`, time: 1.4 };
+                playTone(820, 0.08);
+            });
+
+            room.crystals.forEach(crystal => {
+                if (crystal.collected || Math.hypot((player.x + player.w / 2) - crystal.x, (player.y + player.h / 2) - crystal.y) > 27) return;
+                crystal.collected = true;
+                skylineCrystals++;
+                skylineScore += 100;
+                spawnBurst(crystal.x, crystal.y, '#a5f3fc', 16);
+                roomBanner = { text: `SKY PRISM ${skylineCrystals}/4`, time: 1.3 };
+                playTone(960, 0.06);
+            });
+
+            room.hazards.forEach(hazard => {
+                if (hazard.stunned > 0) {
+                    hazard.stunned = Math.max(0, hazard.stunned - dt);
+                    return;
+                }
+                hazard.phase += dt * 5;
+                hazard.x += hazard.direction * hazard.speed * dt;
+                if (hazard.x < hazard.minX || hazard.x + hazard.w > hazard.maxX) {
+                    hazard.direction *= -1;
+                    hazard.x = Math.max(hazard.minX, Math.min(hazard.maxX - hazard.w, hazard.x));
+                }
+                const overlaps = player.x + player.w > hazard.x && player.x < hazard.x + hazard.w &&
+                    player.y + player.h > hazard.y && player.y < hazard.y + hazard.h;
+                if (!overlaps) return;
+                if (skylinePowerups.shield > 0) {
+                    skylinePowerups.shield = 0;
+                    hazard.stunned = 1.2;
+                    spawnBurst(hazard.x + hazard.w / 2, hazard.y + hazard.h / 2, '#ffe66d', 16);
+                    roomBanner = { text: 'SHIELD BLOCK!', time: 1 };
+                    return;
+                }
+                triggerGameOver('A skyline drone tagged you!');
+            });
+
+            if (skylineScore !== scoreBefore) updateUI();
+            updateSkylineHud();
+            return gameState === 'GAMEOVER';
         }
 
         function useFood() {
@@ -2515,14 +2862,15 @@
         }
 
         function jumpPlayer() {
+            const jumpMultiplier = multiplayerSession?.gameId === 'skyline' && skylinePowerups.highJump > 0 ? 1.45 : 1;
             if (player.grounded) {
-                player.vy = -560;
+                player.vy = -560 * jumpMultiplier;
                 player.grounded = false;
                 player.doubleJumpsLeft = player.canDoubleJump ? 1 : 0;
                 spawnBurst(player.x + player.w / 2, player.y + player.h, '#ffffff', 5);
                 playTone(520, 0.04);
             } else if (player.doubleJumpsLeft > 0) {
-                player.vy = -500;
+                player.vy = -500 * jumpMultiplier;
                 player.doubleJumpsLeft--;
                 spawnBurst(player.x + player.w / 2, player.y + player.h, '#7dd3fc', 8);
                 playTone(720, 0.04);
@@ -2542,6 +2890,15 @@
 
         function interactObject() {
             const currentRoom = rooms[currentRoomKey];
+            if (multiplayerSession?.gameId === 'skyline' && currentRoomKey === 'MultiplayerArena') {
+                const goal = currentRoom.goal;
+                const nearGoal = Math.abs((player.x + player.w / 2) - (goal.x + goal.w / 2)) < 90 &&
+                    Math.abs((player.y + player.h / 2) - (goal.y + goal.h / 2)) < 100;
+                if (nearGoal && skylineCrystals >= 4) triggerWin();
+                else if (nearGoal) document.getElementById('statusText').innerText = `Beacon locked. Find all four prisms (${skylineCrystals}/4).`;
+                else document.getElementById('statusText').innerText = `Skyline Scramble: find four prisms, then use the finish beacon (${skylineCrystals}/4).`;
+                return;
+            }
             const nearbyDoor = currentRoom.doors.find(door => {
                 const targetRoom = rooms[door.targetRoom];
                 return targetRoom &&
@@ -2782,7 +3139,9 @@
             if (player.hasMasterKey) abs.push('MasterKey');
             const sprintLabel = sprintTime > 0 ? ` Pass:${Math.ceil(sprintTime)}s` : ` Stamina:${Math.ceil(sprintStamina)}%${player.sprintLocked ? ' LOCKED' : ''}`;
             const completedClasses = activeLevelSubjects.filter(subject => homeworkDone[subject]).length;
-            document.getElementById('abilityLabel').innerText = `L${level} | ${difficulty} | Classes:${completedClasses}/${activeLevelSubjects.length} | ${abs.length > 0 ? abs.join(', ') : 'None'} | Coins:${coins} Food:${inventory.food} Pass:${inventory.hallPasses}${sprintLabel}`;
+            document.getElementById('abilityLabel').innerText = multiplayerSession?.gameId === 'skyline'
+                ? `SKYLINE SCRAMBLE | Local score:${skylineScore} | Prisms:${skylineCrystals}/4`
+                : `L${level} | ${difficulty} | Classes:${completedClasses}/${activeLevelSubjects.length} | ${abs.length > 0 ? abs.join(', ') : 'None'} | Coins:${coins} Food:${inventory.food} Pass:${inventory.hallPasses}${sprintLabel}`;
             updateShopUI();
         }
 
@@ -2814,6 +3173,17 @@
 
         function triggerWin() {
             gameState = 'WIN';
+            if (multiplayerSession?.gameId === 'skyline') {
+                document.getElementById('gameOverTitle').innerText = 'SKYLINE SCRAMBLE CLEAR!';
+                document.getElementById('gameOverTitle').className = 'text-4xl sm:text-5xl font-black text-green-400 drop-shadow-[4px_4px_0px_#000] mb-4';
+                document.getElementById('gameOverReason').innerText = `You banked ${skylineCrystals}/4 prisms and scored ${skylineScore} points!`;
+                document.getElementById('nextLevelBtn').classList.add('hidden');
+                document.getElementById('retryLevelBtn').classList.remove('hidden');
+                showSlackRating();
+                document.getElementById('gameOverOverlay').classList.remove('hidden');
+                playTone(880, 0.2);
+                return;
+            }
             registerLevelCompletion();
             document.getElementById('gameOverTitle').innerText = level === 10 ? "🎉 LEVEL 10 CLEAR! YOU ESCAPED!" : `🎉 LEVEL ${level} CLEAR!`;
             document.getElementById('gameOverTitle').className = "text-5xl font-black text-green-400 drop-shadow-[4px_4px_0px_#000] mb-4";
@@ -2826,13 +3196,46 @@
             document.getElementById('gameOverOverlay').classList.remove('hidden');
         }
 
+        function rescueWithTeammate() {
+            if (Date.now() - lastBuddyRescue < 60000) return false;
+            const teammate = getNearbyTeammate();
+            if (!teammate) return false;
+
+            lastBuddyRescue = Date.now();
+            currentRoomKey = checkpoint.room || currentRoomKey;
+            player.x = checkpoint.x;
+            player.y = checkpoint.y;
+            player.vx = 0;
+            player.vy = 0;
+            player.grounded = false;
+            energy = Math.max(35, energy);
+            sprintStamina = Math.max(35, sprintStamina);
+            player.sprinting = false;
+            player.sprintLocked = false;
+            isSlacking = false;
+            cameraX = Math.max(0, player.x - canvas.width * 0.42);
+            spawnSafeTime = 2;
+            doorCooldown = 0.6;
+            resetTroubleMeter();
+            gameState = 'PLAYING';
+            roomBanner = { text: `${teammate.name} RESCUED YOU!`, time: 2.2 };
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            document.getElementById('statusText').innerText = `${teammate.name} pulled you back into the game!`;
+            spawnBurst(player.x + player.w / 2, player.y + player.h / 2, '#63e6be', 20);
+            updateUI();
+            return true;
+        }
+
         function triggerGameOver(reason) {
+            if (multiplayerSession && rescueWithTeammate()) return;
             gameState = 'GAMEOVER';
             document.getElementById('nextLevelBtn').classList.add('hidden');
             document.getElementById('retryLevelBtn').classList.remove('hidden');
             document.getElementById('gameOverTitle').innerText = "DETENTION!";
             document.getElementById('gameOverTitle').className = "text-5xl font-black text-yellow-300 drop-shadow-[4px_4px_0px_#000] mb-4";
-            document.getElementById('gameOverReason').innerText = reason;
+            document.getElementById('gameOverReason').innerText = multiplayerSession
+                ? `${reason}\nA nearby teammate can rescue you once per minute.`
+                : reason;
             showSlackRating();
             document.getElementById('gameOverOverlay').classList.remove('hidden');
         }
@@ -2977,11 +3380,15 @@
             if (gameState === 'PLAYING' && !isPaused) {
                 update(dt);
             }
+            if (gameState === 'GAMEOVER' && multiplayerSession) {
+                updateRemoteAnimation(dt);
+                if (Date.now() - lastBuddyRescue >= 60000 && getNearbyTeammate()) rescueWithTeammate();
+            }
             
             draw();
             updateMultiplayer();
 
-            if (gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'HOMEWORK' || gameState === 'SHOP' || gameState === 'LEVEL1_COMPLETE' || gameState === 'HOMEWORK_COMPLETE') {
+            if (gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'HOMEWORK' || gameState === 'SHOP' || gameState === 'LEVEL1_COMPLETE' || gameState === 'HOMEWORK_COMPLETE' || (gameState === 'GAMEOVER' && multiplayerSession)) {
                 requestAnimationFrame(gameLoop);
             }
         }
@@ -2994,7 +3401,15 @@
             if (spawnSafeTime > 0) spawnSafeTime = Math.max(0, spawnSafeTime - dt);
             if (roomBanner.time > 0) roomBanner.time -= dt; // Decrease room banner time
             updateParticles(dt); // Update particle effects
+            updateRemoteAnimation(dt);
+            const wasBuddyNearby = buddyNearby;
+            buddyNearby = Boolean(getNearbyTeammate());
+            if (wasBuddyNearby !== buddyNearby) {
+                document.getElementById('buddyBoostStatus').innerText = buddyNearby ? 'BUDDY LINK +20%' : '';
+                if (buddyNearby) roomBanner = { text: 'BUDDY LINK! MOVE TOGETHER!', time: 1.5 };
+            }
             const room = rooms[currentRoomKey];
+            if (updateSkylineArena(dt, room)) return;
 
             // Player movement controls
             const moveSpeed = player.sprintBoost && sprintTime > 0 ? 430 : (sprintTime > 0 ? 360 : 220); // Adjust move speed based on sprint boost
@@ -3015,14 +3430,15 @@
                 // than sprinting drained it, making stamina feel like it never came back).
                 // Standing still or slacking still tops it up the fastest.
                 const idleRegen = !movingInput && (player.grounded || onFloor);
-                sprintStamina = Math.min(maxSprintStamina, sprintStamina + (idleRegen ? 34 : 20) * dt);
+                sprintStamina = Math.min(maxSprintStamina, sprintStamina + ((idleRegen ? 34 : 20) + (buddyNearby ? 12 : 0)) * dt);
                 if (player.sprintLocked && sprintStamina >= maxSprintStamina) {
                     sprintStamina = maxSprintStamina;
                     player.sprintLocked = false;
                     document.getElementById('statusText').innerText = 'Sprint stamina full.';
                 }
             }
-            const normalSpeed = player.sprinting && sprintStamina > 0 ? 300 : moveSpeed;
+            const turboMultiplier = multiplayerSession?.gameId === 'skyline' && skylinePowerups.turbo > 0 ? 1.5 : 1;
+            const normalSpeed = (player.sprinting && sprintStamina > 0 ? 300 : moveSpeed) * (buddyNearby ? 1.2 : 1) * turboMultiplier;
             if (player.dashTime > 0) {
                 player.dashTime = Math.max(0, player.dashTime - dt);
                 player.vx = player.dashDirection * 1250;
@@ -3054,11 +3470,24 @@
             });
 
             room.platforms.forEach(p => {
+                if (p.brokenUntil > 0) return;
                 if (player.x + player.w > p.x && player.x < p.x + p.w &&
                     player.y + player.h >= p.y && player.y + player.h <= p.y + p.h + player.vy * dt) {
                     player.y = p.y - player.h;
                     player.vy = 0;
                     player.grounded = true;
+                    if (p.surface === 'spring') {
+                        player.vy = -790;
+                        player.grounded = false;
+                        spawnBurst(player.x + player.w / 2, player.y + player.h, '#57f3d2', 10);
+                        playTone(680, 0.05);
+                    } else if (p.surface === 'boost') {
+                        player.vx = (p.direction || 1) * 520;
+                        spawnBurst(player.x + player.w / 2, player.y + player.h / 2, '#ffe66d', 7);
+                    } else if (p.surface === 'crumble' && !p.crumbling) {
+                        p.crumbling = true;
+                        p.crumbleTimer = 0.5;
+                    }
                 }
             });
 
@@ -3197,10 +3626,10 @@
 
             // Slacking Energy Recovery / Sleep Decay
             if (isSlacking) {
-                energy = Math.min(100, energy + 55 * dt);
+                energy = Math.min(100, energy + (buddyNearby ? 70 : 55) * dt);
                 slackSeconds += dt;
             } else {
-                energy = Math.max(0, energy - 1.25 * dt);
+                energy = Math.max(0, energy - (buddyNearby ? 0.35 : 1.25) * dt);
                 activeSeconds += dt;
             }
 
@@ -3298,6 +3727,7 @@
             ctx.translate(-cameraX, 0);
             drawRoomDecor(currentRoomKey);
             drawClassroomDecor(room);
+            if (currentRoomKey === 'MultiplayerArena') drawSkylineBackdrop(room);
 
             // Room Title
             ctx.fillStyle = '#000000';
@@ -3305,13 +3735,7 @@
             ctx.fillText(room.title.toUpperCase(), 30, 40);
 
             // Draw Platforms
-            ctx.fillStyle = '#8b5a2b';
-            ctx.strokeStyle = '#000000';
-            ctx.lineWidth = 3;
-            room.platforms.forEach(p => {
-                ctx.fillRect(p.x, p.y, p.w, p.h);
-                ctx.strokeRect(p.x, p.y, p.w, p.h);
-            });
+            room.platforms.forEach(drawGamePlatform);
 
             // Draw Doors
             room.doors.forEach(d => {
@@ -3382,7 +3806,11 @@
                 });
             }
 
+            if (currentRoomKey === 'MultiplayerArena') drawSkylineObjects(room);
+
             // Draw Player Stick figure
+            const linkedTeammate = buddyNearby ? getNearbyTeammate() : null;
+            if (linkedTeammate) drawBuddyLink(linkedTeammate);
             remotePlayers.forEach(remote => {
                 if (remote.state && remote.state.level === level && remote.state.room === currentRoomKey) drawRemotePlayer(remote);
             });
@@ -3425,6 +3853,160 @@
                 ctx.font = 'bold 14px monospace';
                 ctx.fillText('P / ESC TO RESUME', 306, 248);
             }
+        }
+
+        function drawGamePlatform(platform) {
+            if (platform.brokenUntil > 0) return;
+            const shake = platform.crumbling ? Math.sin(gameTime * 50) * 2 : 0;
+            const x = platform.x + shake;
+            const colors = {
+                floor: '#28485d',
+                spring: '#49e3c1',
+                boost: '#ffd34f',
+                crumble: platform.crumbling ? '#ff795f' : '#e6a95c'
+            };
+            ctx.save();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#102435';
+            ctx.fillStyle = colors[platform.surface] || '#8b5a2b';
+            ctx.fillRect(x, platform.y, platform.w, platform.h);
+            ctx.strokeRect(x, platform.y, platform.w, platform.h);
+
+            if (platform.surface === 'spring') {
+                ctx.strokeStyle = '#eaffff';
+                ctx.lineWidth = 2;
+                for (let mark = 12; mark < platform.w - 8; mark += 24) {
+                    ctx.beginPath();
+                    ctx.moveTo(x + mark, platform.y + platform.h - 2);
+                    ctx.lineTo(x + mark + 6, platform.y + 4);
+                    ctx.stroke();
+                }
+            } else if (platform.surface === 'boost') {
+                ctx.fillStyle = '#fff8dc';
+                const direction = platform.direction || 1;
+                for (let mark = 22; mark < platform.w - 12; mark += 38) {
+                    const centerX = x + (direction > 0 ? mark : platform.w - mark);
+                    ctx.beginPath();
+                    ctx.moveTo(centerX + direction * 9, platform.y + platform.h / 2);
+                    ctx.lineTo(centerX - direction * 5, platform.y + 4);
+                    ctx.lineTo(centerX - direction * 5, platform.y + platform.h - 4);
+                    ctx.closePath();
+                    ctx.fill();
+                }
+            } else if (platform.surface === 'crumble') {
+                ctx.strokeStyle = '#714332';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(x + platform.w * 0.35, platform.y + 2);
+                ctx.lineTo(x + platform.w * 0.48, platform.y + platform.h * 0.6);
+                ctx.lineTo(x + platform.w * 0.42, platform.y + platform.h - 2);
+                ctx.moveTo(x + platform.w * 0.75, platform.y + 2);
+                ctx.lineTo(x + platform.w * 0.66, platform.y + platform.h * 0.65);
+                ctx.stroke();
+            }
+            ctx.restore();
+        }
+
+        function drawSkylineBackdrop(room) {
+            ctx.save();
+            ctx.fillStyle = '#98d7ed';
+            ctx.fillRect(0, 55, room.width, 270);
+            for (let index = 0; index < room.width / 120; index++) {
+                const buildingX = index * 120;
+                const buildingHeight = 70 + (index * 47 % 95);
+                ctx.fillStyle = index % 2 ? '#5f91ad' : '#47758f';
+                ctx.fillRect(buildingX, 320 - buildingHeight, 94, buildingHeight);
+                ctx.fillStyle = index % 3 ? '#c9f5ff' : '#ffe77a';
+                for (let row = 0; row < 3; row++) {
+                    for (let column = 0; column < 3; column++) {
+                        const windowY = 320 - buildingHeight + 14 + row * 21;
+                        if (windowY < 315) ctx.fillRect(buildingX + 12 + column * 24, windowY, 9, 11);
+                    }
+                }
+            }
+            ctx.fillStyle = '#f7c85b';
+            ctx.fillRect(0, 320, room.width, 5);
+            ctx.restore();
+        }
+
+        function drawSkylineObjects(room) {
+            room.pickups.forEach(pickup => {
+                if (!pickup.active) return;
+                const pulse = 1 + Math.sin(gameTime * 6 + pickup.x) * 0.12;
+                const color = pickup.type === 'turbo' ? '#39daf4' : (pickup.type === 'highJump' ? '#fb62d0' : '#ffe66d');
+                ctx.save();
+                ctx.translate(pickup.x, pickup.y);
+                ctx.scale(pulse, pulse);
+                ctx.fillStyle = `${color}55`;
+                ctx.strokeStyle = color;
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, 20, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#123047';
+                ctx.font = 'bold 19px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(pickup.type === 'turbo' ? '⚡' : (pickup.type === 'highJump' ? '⬆' : '◇'), 0, 1);
+                ctx.restore();
+            });
+
+            room.crystals.forEach(crystal => {
+                if (crystal.collected) return;
+                const pulse = 1 + Math.sin(gameTime * 7 + crystal.x) * 0.15;
+                ctx.save();
+                ctx.translate(crystal.x, crystal.y + Math.sin(gameTime * 3 + crystal.x) * 4);
+                ctx.rotate(gameTime * 1.4);
+                ctx.scale(pulse, pulse);
+                ctx.fillStyle = '#94f6ff';
+                ctx.strokeStyle = '#137b9a';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(0, -15);
+                ctx.lineTo(11, -3);
+                ctx.lineTo(7, 13);
+                ctx.lineTo(-7, 13);
+                ctx.lineTo(-11, -3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            });
+
+            room.hazards.forEach(hazard => {
+                ctx.save();
+                ctx.translate(hazard.x + hazard.w / 2, hazard.y + hazard.h / 2);
+                ctx.rotate(hazard.phase);
+                ctx.fillStyle = hazard.stunned > 0 ? '#ffe66d' : '#ff557a';
+                ctx.strokeStyle = '#17364b';
+                ctx.lineWidth = 3;
+                ctx.fillRect(-hazard.w / 2, -hazard.h / 2, hazard.w, hazard.h);
+                ctx.strokeRect(-hazard.w / 2, -hazard.h / 2, hazard.w, hazard.h);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(-8, -4, 5, 5);
+                ctx.fillRect(3, -4, 5, 5);
+                ctx.restore();
+            });
+
+            const goal = room.goal;
+            const unlocked = skylineCrystals >= 4;
+            const glow = 0.65 + Math.sin(gameTime * 5) * 0.25;
+            ctx.save();
+            ctx.globalAlpha = glow;
+            ctx.fillStyle = unlocked ? '#49e3c1' : '#637d8d';
+            ctx.fillRect(goal.x, goal.y, 10, goal.h);
+            ctx.fillRect(goal.x + goal.w - 10, goal.y, 10, goal.h);
+            ctx.fillRect(goal.x, goal.y, goal.w, 10);
+            ctx.strokeStyle = unlocked ? '#eaffff' : '#263d4c';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(goal.x, goal.y, goal.w, goal.h);
+            ctx.globalAlpha = 1;
+            ctx.fillStyle = '#102435';
+            ctx.font = 'bold 12px monospace';
+            ctx.textAlign = 'center';
+            ctx.fillText(unlocked ? 'FINISH' : 'LOCKED', goal.x + goal.w / 2, goal.y + goal.h + 18);
+            ctx.restore();
         }
 
         function drawRoomDecor(roomKey) {
@@ -3620,6 +4202,7 @@
         }
 
         function drawPixelNoise() {
+            if (multiplayerSession) return;
             ctx.save();
             ctx.globalAlpha = 0.08;
             for (let i = 0; i < 90; i++) {
@@ -3728,11 +4311,34 @@
             ctx.restore();
         }
 
+        function drawBuddyLink(remote) {
+            ctx.save();
+            ctx.strokeStyle = 'rgba(14, 165, 233, 0.8)';
+            ctx.lineWidth = 4;
+            ctx.setLineDash([9, 7]);
+            ctx.lineDashOffset = -gameTime * 28;
+            ctx.beginPath();
+            ctx.moveTo(player.x + player.w / 2, player.y + player.h / 2);
+            ctx.lineTo((remote.renderX ?? remote.state.x) + 12, (remote.renderY ?? remote.state.y) + 20);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         function drawRemotePlayer(remote) {
             const state = remote.state;
-            const centerX = state.x + 12;
-            const headY = state.y + 15;
+            const remoteX = remote.renderX ?? state.x;
+            const remoteY = remote.renderY ?? state.y;
+            const centerX = remoteX + 12;
+            const headY = remoteY + 15;
             ctx.save();
+            if (multiplayerSession?.gameId === 'skyline' && state.moving) {
+                const direction = remote.moveDirection || -1;
+                ctx.globalAlpha = 0.55;
+                ctx.fillStyle = remote.color || '#3b82f6';
+                ctx.fillRect(centerX + direction * 17, headY + 16, 22, 4);
+                ctx.fillRect(centerX + direction * 28, headY + 25, 14, 3);
+                ctx.globalAlpha = 1;
+            }
             ctx.lineWidth = 3;
             ctx.strokeStyle = '#000000';
             ctx.fillStyle = remote.color || '#3b82f6';
@@ -3756,13 +4362,9 @@
             ctx.font = 'bold 12px "Comic Sans MS"';
             ctx.lineWidth = 3;
             ctx.strokeStyle = '#ffffff';
-            ctx.strokeText(remote.name, centerX, state.y - 8);
+            ctx.strokeText(remote.name, centerX, remoteY - 8);
             ctx.fillStyle = '#000000';
-            ctx.fillText(remote.name, centerX, state.y - 8);
-            if (state.slacking) {
-                ctx.fillStyle = '#d62828';
-                ctx.fillText('SLACKING', centerX, state.y - 22);
-            }
+            ctx.fillText(remote.name, centerX, remoteY - 8);
             ctx.restore();
         }
 
@@ -3778,6 +4380,18 @@
             const stride = isMoving ? Math.sin(walkCycle) * (isSprinting ? 12 : 8) : 0;
             const bob = isMoving ? Math.abs(Math.sin(walkCycle * 0.5)) * 2 : 0;
             const py = player.y + 15 + bob;
+
+            if (multiplayerSession?.gameId === 'skyline') {
+                const auraColor = skylinePowerups.shield > 0 ? '#ffe66d'
+                    : (skylinePowerups.highJump > 0 ? '#fb62d0' : (skylinePowerups.turbo > 0 ? '#39daf4' : '#7ee8ed'));
+                ctx.strokeStyle = auraColor;
+                ctx.lineWidth = 2;
+                ctx.globalAlpha = 0.45 + Math.sin(gameTime * 7) * 0.18;
+                ctx.beginPath();
+                ctx.ellipse(px, player.y + player.h / 2, 19 + Math.sin(gameTime * 4) * 2, 27, 0, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.globalAlpha = 1;
+            }
 
             if ((isSprinting || player.dashTime > 0) && (isMoving || player.dashTime > 0)) {
                 const travelDirection = Math.sign(player.vx) || player.dashDirection || 1;
