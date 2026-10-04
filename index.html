@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="icon" type="image/x-icon" href="other/icawn.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NTG Beta</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <body><h1>Beta Stage 2/5</h1></body>
+    <body><h1>Beta Stage 3/5</h1></body>
     <style>
         @import url('https://fonts.cdnfonts.com/css/comic-sans-ms');
 
@@ -128,6 +129,14 @@
 
         #startOverlay {
             overflow-y: auto;
+        }
+
+        .multiplayer-input {
+            min-width: 0;
+            border: 2px solid #000;
+            background: #fff;
+            padding: 0.45rem 0.55rem;
+            font-weight: 900;
         }
 
         .options-panel label {
@@ -493,6 +502,7 @@
             </div>
             <div class="flex gap-1">
                 <button onclick="toggleEasterEgg()" title="Secret file" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ secret_notes.txt ]</button>
+                <button onclick="toggleAdminPanel()" title="Open admin panel" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ ADMIN ]</button>
                 <button onclick="toggleChangelog()" title="View changelog" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ CHANGELOG ]</button>
                 <button onclick="toggleFullscreen()" title="Toggle fullscreen" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ FULL ]</button>
                 <div class="w-4 h-4 bg-[#c0c0c0] border border-black text-black flex items-center justify-center text-xs">_</div>
@@ -514,6 +524,32 @@
             
             <canvas id="gameCanvas" width="800" height="450" class="paint-box w-full max-w-[800px] h-auto bg-white shadow-inner cursor-crosshair"></canvas>
 
+            <div id="multiplayerHud" class="hidden absolute bottom-3 right-3 z-10 bg-white border-2 border-black px-2 py-1 shadow-[3px_3px_0_#000] text-xs font-black">
+                <span id="multiplayerRoomLabel"></span>
+                <button id="multiplayerInviteBtn" onclick="toggleMultiplayerPanel()" title="Open connection invitations" class="paint-button ml-2 px-2 py-1 bg-cyan-300 text-xs">INVITE</button>
+                <button onclick="leaveMultiplayer()" title="Leave multiplayer room" class="paint-button ml-2 px-2 py-1 bg-red-300 text-xs">LEAVE</button>
+            </div>
+
+            <div id="multiplayerModal" class="hidden absolute inset-0 z-40 bg-black/70 flex items-center justify-center p-3">
+                <div class="bg-cyan-50 border-4 border-black p-4 w-full max-w-xl max-h-full overflow-y-auto shadow-[8px_8px_0_#000] text-left">
+                    <div class="flex justify-between items-center border-b-4 border-black pb-2 mb-3">
+                        <div>
+                            <h2 class="text-xl font-black">INVITE FRIENDS</h2>
+                            <p id="multiplayerModalRoom" class="text-xs font-bold"></p>
+                        </div>
+                        <button onclick="toggleMultiplayerPanel(false)" class="paint-button px-3 py-1 bg-red-300 font-black">CLOSE</button>
+                    </div>
+                    <p class="text-xs font-bold mb-2">Share this room code. Friends enter it on the start screen to join.</p>
+                    <div class="flex items-center gap-2 border-2 border-black bg-white p-3">
+                        <strong id="multiplayerInviteCode" class="font-mono text-3xl tracking-widest flex-1 text-center"></strong>
+                        <button onclick="copyRoomCode()" class="paint-button px-3 py-2 bg-blue-300 font-black">COPY CODE</button>
+                    </div>
+                    <h3 class="font-black mt-3">PLAYERS</h3>
+                    <ul id="multiplayerPlayerList" class="border-2 border-black bg-white p-2 text-sm font-bold min-h-12"></ul>
+                    <p id="multiplayerHostStatus" class="text-xs font-bold mt-2 min-h-4"></p>
+                </div>
+            </div>
+
             <!-- START OVERLAY -->
             <div id="startOverlay" class="absolute inset-0 bg-yellow-100/90 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center">
                 <h1 class="text-5xl sm:text-7xl font-extrabold tracking-widest text-red-600 drop-shadow-[4px_4px_0px_#000] mb-2 transform -rotate-2">
@@ -531,9 +567,36 @@
                     <p>🔑 <strong>Goal:</strong> Complete 4 core classes, explore bonus rooms, collect upgrades, then unlock the Principal Office and ESCAPE!</p>
                 </div>
 
+                <div class="bg-cyan-100 border-4 border-black p-3 mb-4 w-full max-w-md shadow-[5px_5px_0px_#000] text-left">
+                    <h2 class="font-black text-lg">PLAY WITH FRIENDS</h2>
+                    <p class="text-xs font-bold mb-2">Create a room, share its code, and join up to 4 friends.</p>
+                    <label class="block text-xs font-black mb-1" for="multiplayerName">Player name</label>
+                    <input id="multiplayerName" class="multiplayer-input w-full mb-2" maxlength="16" autocomplete="nickname" placeholder="Your name">
+                    <div class="flex gap-2">
+                        <button onclick="createMultiplayerRoom()" class="paint-button flex-1 px-2 py-2 bg-green-300 font-black text-xs">MAKE A ROOM</button>
+                        <input id="multiplayerCode" class="multiplayer-input w-24 text-center uppercase" maxlength="5" placeholder="CODE" aria-label="Room code">
+                        <button onclick="joinMultiplayerRoom()" class="paint-button flex-1 px-2 py-2 bg-blue-300 font-black text-xs">JOIN</button>
+                    </div>
+                    <p id="multiplayerMenuStatus" class="text-xs font-bold mt-2 min-h-4">Create a room or enter a friend's 5-character code.</p>
+                </div>
+
                 <button onclick="startGame()" class="paint-button text-2xl font-extrabold px-8 py-4 bg-green-400 text-black hover:bg-green-300 transform hover:scale-105">
                     ▶️ ENTER SCHOOL!
                 </button>
+                <div class="bg-white border-4 border-black p-3 mt-3 w-full max-w-md shadow-[5px_5px_0px_#000] text-left options-panel">
+                    <label>Level
+                        <select id="levelOption" onchange="selectLevel(this.value)"></select>
+                    </label>
+                    <label>Difficulty
+                        <select id="difficultyOption" onchange="selectDifficulty(this.value)">
+                            <option value="Easy">Easy</option>
+                            <option value="Normal" selected>Normal</option>
+                            <option value="Hard">Hard</option>
+                            <option value="Extreme" disabled>Extreme (Locked)</option>
+                        </select>
+                    </label>
+                    <p id="progressionStatus" class="text-xs font-bold text-blue-800">Level 1 unlocked. Beat every level on Hard to unlock Extreme.</p>
+                </div>
                 <button onclick="toggleOptions()" class="paint-button mt-3 px-5 py-2 bg-blue-300 font-black">⚙ OPTIONS</button>
                 <div id="optionsPanel" class="hidden bg-white border-4 border-black p-4 mt-3 w-full max-w-md shadow-[5px_5px_0px_#000] options-panel">
                     <label>Resolution
@@ -620,6 +683,10 @@
                         <p><strong>Movement:</strong> Independent sprint stamina, recovery, stronger dash, animated player trails, and dynamic energy colors.</p>
                         <p><strong>World:</strong> Levels 1-10, longer side-scrolling wings, randomized classes, teachers, reporters, and classroom decor.</p>
                         <p><strong>Flow:</strong> Current-level retries, explicit door interaction, level completion navigation, and pause/menu controls.</p>
+                        <p><strong>Challenge:</strong> Teachers now fill a three-step Trouble Meter instead of causing instant detention. Choose Easy, Normal, Hard, or unlock Extreme by clearing every level on Hard.</p>
+                        <p><strong>Progression:</strong> Levels unlock in order and can be replayed from the level select menu after they have been cleared.</p>
+                        <p><strong>Admin:</strong> Password-locked local developer tools can unlock progression and abilities, complete objectives, adjust coins and supplies, add helpers, refill stats, and clear trouble.</p>
+                        <p><strong>Variety:</strong> Every generated level now has its own route profile with different length, platform spacing, vertical jumps, hazards, teacher coverage, and reporter speeds. Homework also includes level-specific question variants across every subject, with later levels becoming harder to traverse and solve.</p>
                     </div>
                 </div>
             </div>
@@ -726,6 +793,69 @@
                 </div>
             </div>
 
+            <div id="adminModal" class="hidden absolute inset-0 bg-black/80 flex items-center justify-center p-4">
+                <div class="admin-panel bg-yellow-50 border-4 border-black p-4 w-full max-w-2xl shadow-[8px_8px_0px_#ffdd00] text-left">
+                    <div class="flex justify-between items-center border-b-4 border-black pb-2 mb-3">
+                        <div>
+                            <h2 class="text-2xl font-black">NTG ADMIN PANEL</h2>
+                            <p class="text-xs font-bold">Local developer controls. Changes affect this browser only.</p>
+                        </div>
+                        <button onclick="closeAdminPanel()" class="paint-button px-3 py-1 bg-red-300 font-black">X</button>
+                    </div>
+
+                    <div id="adminLoginView">
+                        <form onsubmit="submitAdminLogin(event)" class="grid gap-3 max-w-sm mx-auto py-3">
+                            <label class="font-black">Username
+                                <input id="adminUsernameInput" type="text" autocomplete="username" class="border-2 border-black bg-white p-2 w-full" required>
+                            </label>
+                            <label class="font-black">Password
+                                <input id="adminPasswordInput" type="password" autocomplete="current-password" class="border-2 border-black bg-white p-2 w-full" required>
+                            </label>
+                            <button type="submit" class="paint-button px-4 py-2 bg-green-400 font-black">UNLOCK ADMIN TOOLS</button>
+                            <p id="adminLoginMessage" class="text-sm font-bold text-red-700 min-h-[20px]"></p>
+                        </form>
+                    </div>
+
+                    <div id="adminControlsView" class="hidden grid gap-3">
+                        <div class="grid sm:grid-cols-2 gap-2">
+                            <button onclick="adminUnlockProgression()" class="paint-button p-2 bg-green-300 font-black">UNLOCK ALL LEVELS + EXTREME</button>
+                            <button onclick="adminUnlockAbilities()" class="paint-button p-2 bg-blue-300 font-black">UNLOCK ALL ABILITIES</button>
+                            <button onclick="adminCompleteObjectives()" class="paint-button p-2 bg-yellow-300 font-black">COMPLETE ALL HOMEWORK</button>
+                            <button onclick="adminResetTrouble()" class="paint-button p-2 bg-pink-300 font-black">CLEAR TROUBLE METER</button>
+                        </div>
+                        <div class="border-2 border-black bg-white p-3 grid sm:grid-cols-3 gap-2">
+                            <label class="font-black">Coins
+                                <input id="adminCoinsInput" type="number" min="0" value="100" class="border-2 border-black bg-yellow-100 p-2 w-full">
+                            </label>
+                            <button onclick="adminGiveCoins()" class="paint-button self-end p-2 bg-yellow-300 font-black">SET COINS</button>
+                            <button onclick="adminAddCoins()" class="paint-button self-end p-2 bg-yellow-300 font-black">ADD COINS</button>
+                        </div>
+                        <div class="border-2 border-black bg-white p-3 grid sm:grid-cols-3 gap-2">
+                            <label class="font-black">Food
+                                <input id="adminFoodInput" type="number" min="0" value="10" class="border-2 border-black bg-yellow-100 p-2 w-full">
+                            </label>
+                            <label class="font-black">Hall Passes
+                                <input id="adminPassInput" type="number" min="0" value="10" class="border-2 border-black bg-yellow-100 p-2 w-full">
+                            </label>
+                            <button onclick="adminGiveSupplies()" class="paint-button self-end p-2 bg-blue-300 font-black">SET SUPPLIES</button>
+                        </div>
+                        <div class="border-2 border-black bg-white p-3 flex flex-wrap gap-2 items-center">
+                            <label class="font-black">Mystery helper
+                                <select id="adminHelperSelect" class="border-2 border-black bg-yellow-100 p-2">
+                                    <option value="energy">Energy</option>
+                                    <option value="stealth">Stealth</option>
+                                    <option value="dash">Dash</option>
+                                </select>
+                            </label>
+                            <button onclick="adminGiveHelper()" class="paint-button p-2 bg-purple-300 font-black">ADD HELPER</button>
+                            <button onclick="adminRefillPlayer()" class="paint-button p-2 bg-green-300 font-black">REFILL ENERGY + STAMINA</button>
+                        </div>
+                        <p id="adminStatus" class="text-sm font-black text-green-700 min-h-[20px]"></p>
+                        <button onclick="logoutAdmin()" class="paint-button p-2 bg-gray-300 font-black justify-self-end">LOCK ADMIN PANEL</button>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
         <!-- Controls Bar -->
@@ -770,6 +900,23 @@
         ctx.imageSmoothingEnabled = false;
 
         let gameState = 'MENU';
+        let selectedLevel = 1;
+        let difficulty = 'Normal';
+        let troubleMeter = 0;
+        let teacherAlertTimer = 0;
+        let adminAuthenticated = false;
+        const adminUsername = 'admin';
+        const adminPassword = 'NTG-admin';
+        const progressionStorageKey = 'ntg-progression';
+        let unlockedLevels = Array(10).fill(false);
+        let hardCompletedLevels = Array(10).fill(false);
+        let extremeUnlocked = false;
+        const difficultySettings = {
+            Easy: { alertGain: 0.45, alertDecay: 0.9, teacherSpeed: 0.8, label: 'Easy' },
+            Normal: { alertGain: 0.7, alertDecay: 0.65, teacherSpeed: 1, label: 'Normal' },
+            Hard: { alertGain: 1, alertDecay: 0.45, teacherSpeed: 1.2, label: 'Hard' },
+            Extreme: { alertGain: 1.35, alertDecay: 0.3, teacherSpeed: 1.45, label: 'Extreme' }
+        };
         let energy = 100;
         const maxEnergy = 100;
         let sprintStamina = 100;
@@ -803,6 +950,14 @@
         let frameInterval = 1000 / maxFps;
         let lastFrameTime = 0;
         let capturingKeybind = null;
+        let multiplayerSession = null;
+        let multiplayerPlayers = [];
+        let remotePlayers = [];
+        let networkWorldSeed = 0;
+        let nextNetworkSend = 0;
+        let nextNetworkPoll = 0;
+        let networkSendBusy = false;
+        let networkPollBusy = false;
         const optionsStorageKey = 'ntg-options';
         const keybinds = {
             left: 'ArrowLeft',
@@ -1335,7 +1490,115 @@
             });
         }
 
+        function getDifficultySettings() {
+            return difficultySettings[difficulty] || difficultySettings.Normal;
+        }
+
+        function saveProgression() {
+            localStorage.setItem(progressionStorageKey, JSON.stringify({
+                unlockedLevels,
+                hardCompletedLevels,
+                extremeUnlocked
+            }));
+        }
+
+        function loadProgression() {
+            try {
+                const saved = JSON.parse(localStorage.getItem(progressionStorageKey));
+                if (saved) {
+                    unlockedLevels = Array.from({ length: 10 }, (_, index) => Boolean(saved.unlockedLevels?.[index]));
+                    hardCompletedLevels = Array.from({ length: 10 }, (_, index) => Boolean(saved.hardCompletedLevels?.[index]));
+                    extremeUnlocked = Boolean(saved.extremeUnlocked);
+                }
+            } catch (error) {
+                localStorage.removeItem(progressionStorageKey);
+            }
+            unlockedLevels[0] = true;
+            if (!extremeUnlocked) document.getElementById('difficultyOption').value = 'Normal';
+            updateLevelSelectUI();
+        }
+
+        function updateLevelSelectUI() {
+            const select = document.getElementById('levelOption');
+            if (!select) return;
+            select.innerHTML = '';
+            unlockedLevels.forEach((isUnlocked, index) => {
+                const levelNumber = index + 1;
+                const option = document.createElement('option');
+                option.value = levelNumber;
+                option.textContent = isUnlocked ? `Level ${levelNumber}` : `Level ${levelNumber} (Locked)`;
+                option.disabled = !isUnlocked;
+                select.appendChild(option);
+            });
+            selectedLevel = unlockedLevels[selectedLevel - 1] ? selectedLevel : unlockedLevels.findIndex(Boolean) + 1;
+            select.value = selectedLevel;
+            const difficultyOption = document.getElementById('difficultyOption');
+            difficultyOption.options[3].disabled = !extremeUnlocked;
+            difficultyOption.options[3].textContent = extremeUnlocked ? 'Extreme' : 'Extreme (Locked)';
+            difficultyOption.value = difficulty === 'Extreme' && !extremeUnlocked ? 'Normal' : difficulty;
+            document.getElementById('progressionStatus').innerText = extremeUnlocked
+                ? `Level ${selectedLevel} selected. Extreme difficulty unlocked!`
+                : `Level ${selectedLevel} selected. Beat every level on Hard to unlock Extreme.`;
+        }
+
+        function selectLevel(value) {
+            const levelNumber = Number(value);
+            if (unlockedLevels[levelNumber - 1]) selectedLevel = levelNumber;
+            updateLevelSelectUI();
+        }
+
+        function selectDifficulty(value) {
+            if (value === 'Extreme' && !extremeUnlocked) {
+                difficulty = 'Normal';
+                document.getElementById('difficultyOption').value = 'Normal';
+                return;
+            }
+            difficulty = value;
+            updateLevelSelectUI();
+        }
+
+        function resetTroubleMeter() {
+            troubleMeter = 0;
+            teacherAlertTimer = 0;
+        }
+
+        function registerLevelCompletion() {
+            unlockedLevels[Math.min(level, 10) - 1] = true;
+            if (level < 10) unlockedLevels[level] = true;
+            if (difficulty === 'Hard') hardCompletedLevels[level - 1] = true;
+            extremeUnlocked = hardCompletedLevels.every(Boolean);
+            saveProgression();
+            updateLevelSelectUI();
+        }
+
+        function setupSelectedLevel() {
+            level = selectedLevel;
+            resetTroubleMeter();
+            if (level === 1) {
+                resetLevelObjectives(['Math', 'ELA', 'Science', 'Gym']);
+                currentRoomKey = 'Math';
+            } else {
+                currentRoomKey = setupGeneratedLevel(level);
+            }
+            energy = maxEnergy;
+            sprintStamina = maxSprintStamina;
+            player.canDoubleJump = false;
+            player.canStealth = false;
+            player.canDash = false;
+            player.hasMasterKey = false;
+            player.sprintLocked = false;
+            player.x = 100;
+            player.y = 300;
+            player.vx = 0;
+            player.vy = 0;
+            checkpoint = { room: currentRoomKey, x: 100, y: 300 };
+            cameraX = 0;
+            doorCooldown = 0.8;
+            spawnSafeTime = 1.25;
+        }
+
         function startGame() {
+            if (gameState === 'MENU') setupSelectedLevel();
             document.getElementById('startOverlay').classList.add('hidden');
             document.getElementById('gameOverOverlay').classList.add('hidden');
             document.getElementById('pauseOverlay').classList.add('hidden');
@@ -1345,11 +1608,253 @@
             lastTimestamp = 0;
             lastFrameTime = 0;
             gameTime = 0;
+            resetTroubleMeter();
             initializeRoomCoins();
             updateUI();
+            updateMultiplayerHud();
             lockLandscape();
             playTone(440, 0.08);
             requestAnimationFrame(gameLoop);
+        }
+
+        function getMultiplayerName() {
+            const input = document.getElementById('multiplayerName');
+            const name = input.value.trim().slice(0, 16);
+            if (!name) {
+                input.focus();
+                document.getElementById('multiplayerMenuStatus').innerText = 'Choose a player name first.';
+                return '';
+            }
+            localStorage.setItem('ntg-player-name', name);
+            return name;
+        }
+
+        function getNetworkState() {
+            return {
+                x: player.x,
+                y: player.y,
+                room: currentRoomKey,
+                level,
+                slacking: isSlacking,
+                moving: Math.abs(player.vx) > 12,
+                done: Object.keys(homeworkDone).filter(subject => homeworkDone[subject]),
+                abilities: {
+                    canDoubleJump: player.canDoubleJump,
+                    canStealth: player.canStealth,
+                    canDash: player.canDash,
+                    hasMasterKey: player.hasMasterKey
+                }
+            };
+        }
+
+        function updateRemoteRoster(players) {
+            multiplayerPlayers = Array.isArray(players) ? players : [];
+            remotePlayers = multiplayerPlayers.filter(remote => remote.id !== multiplayerSession?.playerId);
+            let progressChanged = false;
+            remotePlayers.forEach(remote => {
+                if (!remote.state || remote.state.level !== level) return;
+                (remote.state.done || []).forEach(subject => {
+                    if (!homeworkDone[subject]) {
+                        homeworkDone[subject] = true;
+                        progressChanged = true;
+                    }
+                });
+                const abilities = remote.state.abilities || {};
+                ['canDoubleJump', 'canStealth', 'canDash', 'hasMasterKey'].forEach(ability => {
+                    if (abilities[ability] && !player[ability]) {
+                        player[ability] = true;
+                        progressChanged = true;
+                    }
+                });
+            });
+            if (progressChanged) updateUI();
+            updateMultiplayerHud();
+        }
+
+        async function createMultiplayerRoom() {
+            const name = getMultiplayerName();
+            if (!name) return;
+            selectedLevel = Number(document.getElementById('levelOption').value) || selectedLevel;
+            document.getElementById('multiplayerMenuStatus').innerText = 'Making a room...';
+            try {
+                const response = await fetch('/api/rooms', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name,
+                        level: selectedLevel,
+                        difficulty: document.getElementById('difficultyOption').value
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Could not make a room.');
+                connectToMultiplayerRoom(data, name, 'host');
+                document.getElementById('multiplayerMenuStatus').innerText = `Room ${data.code} created. Click Invite to share the code.`;
+            } catch (error) {
+                document.getElementById('multiplayerMenuStatus').innerText = window.location.protocol === 'file:'
+                    ? 'Open http://localhost:3000 after starting the room server with node.'
+                    : (error.message || 'Could not reach the room server.');
+            }
+        }
+
+        async function joinMultiplayerRoom() {
+            const name = getMultiplayerName();
+            if (!name) return;
+            const status = document.getElementById('multiplayerMenuStatus');
+            const code = document.getElementById('multiplayerCode').value.trim().toUpperCase();
+            if (!/^[A-Z0-9]{5}$/.test(code)) {
+                status.innerText = 'Enter the 5-character room code.';
+                document.getElementById('multiplayerCode').focus();
+                return;
+            }
+            status.innerText = 'Joining room...';
+            try {
+                const response = await fetch('/api/rooms/join', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, code })
+                });
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Could not join room.');
+                connectToMultiplayerRoom(data, name, 'guest');
+                document.getElementById('multiplayerMenuStatus').innerText = `Joined room ${data.code}.`;
+            } catch (error) {
+                status.innerText = window.location.protocol === 'file:'
+                    ? 'Open http://localhost:3000 after starting the room server with node.'
+                    : (error.message || 'Could not reach the room server.');
+            }
+        }
+
+        function connectToMultiplayerRoom(data, name, role) {
+            multiplayerSession = { role, code: data.code, playerId: data.playerId, name };
+            networkWorldSeed = Number(data.worldSeed) || 0;
+            selectedLevel = Number(data.level) || selectedLevel;
+            difficulty = data.difficulty || difficulty;
+            document.getElementById('levelOption').value = selectedLevel;
+            document.getElementById('difficultyOption').value = difficulty;
+            document.getElementById('multiplayerCode').value = data.code;
+            updateRemoteRoster(data.players || []);
+            startGame();
+        }
+
+        function updateMultiplayerHud() {
+            const hud = document.getElementById('multiplayerHud');
+            if (!multiplayerSession) {
+                hud.classList.add('hidden');
+                return;
+            }
+            const count = multiplayerPlayers.length || 1;
+            document.getElementById('multiplayerRoomLabel').innerText = `ROOM ${multiplayerSession.code} | ${count}/5`;
+            document.getElementById('multiplayerModalRoom').innerText = `ROOM ${multiplayerSession.code} | ${count}/5 players`;
+            document.getElementById('multiplayerInviteCode').innerText = multiplayerSession.code;
+            document.getElementById('multiplayerInviteBtn').classList.toggle('hidden', multiplayerSession.role !== 'host');
+            const list = document.getElementById('multiplayerPlayerList');
+            list.replaceChildren(...multiplayerPlayers.map(remote => {
+                const item = document.createElement('li');
+                item.className = 'py-1';
+                item.style.borderLeft = `5px solid ${remote.color || '#3b82f6'}`;
+                item.style.paddingLeft = '0.5rem';
+                item.textContent = remote.id === multiplayerSession.playerId ? `${remote.name} (you)` : remote.name;
+                return item;
+            }));
+            hud.classList.remove('hidden');
+        }
+
+        function clearMultiplayerSession() {
+            multiplayerSession = null;
+            multiplayerPlayers = [];
+            remotePlayers = [];
+            updateMultiplayerHud();
+        }
+
+        function closeMultiplayerConnections(unloading = false) {
+            const session = multiplayerSession;
+            if (!session) return;
+            multiplayerSession = null;
+            const body = JSON.stringify({ code: session.code, playerId: session.playerId });
+            if (unloading && navigator.sendBeacon) {
+                navigator.sendBeacon('/api/leave', new Blob([body], { type: 'application/json' }));
+            } else {
+                fetch('/api/leave', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body,
+                    keepalive: true
+                }).catch(() => {});
+            }
+            multiplayerPlayers = [];
+            remotePlayers = [];
+            updateMultiplayerHud();
+        }
+
+        function leaveMultiplayer() {
+            closeMultiplayerConnections();
+            returnToMenu();
+        }
+
+        function updateMultiplayer() {
+            const session = multiplayerSession;
+            if (!session) return;
+            const now = Date.now();
+            if (now >= nextNetworkSend && !networkSendBusy) {
+                nextNetworkSend = now + 100;
+                networkSendBusy = true;
+                fetch('/api/state', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ code: session.code, playerId: session.playerId, state: getNetworkState() })
+                }).then(response => {
+                    if (response.status === 404) throw new Error('Room ended. Make or join another room.');
+                }).catch(error => {
+                    if (multiplayerSession !== session) return;
+                    document.getElementById('multiplayerMenuStatus').innerText = error.message || 'Room connection lost.';
+                    clearMultiplayerSession();
+                }).finally(() => { networkSendBusy = false; });
+            }
+
+            if (now >= nextNetworkPoll && !networkPollBusy) {
+                nextNetworkPoll = now + 350;
+                networkPollBusy = true;
+                const query = new URLSearchParams({ code: session.code, playerId: session.playerId });
+                fetch(`/api/room?${query}`).then(async response => {
+                    const data = await response.json();
+                    if (!response.ok) throw new Error(data.error || 'Room session ended.');
+                    if (multiplayerSession !== session) return;
+                    updateRemoteRoster(data.players);
+                    document.getElementById('multiplayerHostStatus').innerText = `${data.players.length}/5 players connected.`;
+                }).catch(error => {
+                    if (multiplayerSession !== session) return;
+                    document.getElementById('multiplayerMenuStatus').innerText = error.message || 'Room connection lost.';
+                    clearMultiplayerSession();
+                }).finally(() => { networkPollBusy = false; });
+            }
+        }
+
+        window.addEventListener('beforeunload', () => {
+            closeMultiplayerConnections(true);
+        });
+
+        function toggleMultiplayerPanel(show) {
+            if (!multiplayerSession) return;
+            const modal = document.getElementById('multiplayerModal');
+            const shouldShow = typeof show === 'boolean' ? show : modal.classList.contains('hidden');
+            updateMultiplayerHud();
+            modal.classList.toggle('hidden', !shouldShow);
+        }
+
+        async function copyRoomCode() {
+            if (!multiplayerSession) return;
+            try {
+                await navigator.clipboard.writeText(multiplayerSession.code);
+            } catch (error) {
+                const codeField = document.createElement('textarea');
+                codeField.value = multiplayerSession.code;
+                document.body.appendChild(codeField);
+                codeField.select();
+                document.execCommand('copy');
+                codeField.remove();
+            }
+            document.getElementById('multiplayerHostStatus').innerText = 'Room code copied. Send it to your friends.';
         }
 
         function lockLandscape() {
@@ -1443,6 +1948,7 @@
             player.sprinting = false;
             player.sprintLocked = false;
             player.dashTime = 0;
+            resetTroubleMeter();
             particles = [];
             roomBanner = { text: '', time: 0 };
             combo = 0;
@@ -1491,17 +1997,139 @@
             activeHomework = [];
         }
 
+        const generatedLevelLayouts = [
+            {
+                width: 2700, color: '#e8f1ff', platforms: [[120, 300, 180], [520, 270, 180], [920, 310, 180], [1320, 260, 190], [1720, 300, 190], [2120, 250, 190]],
+                doorY: [200, 170, 210, 160, 200, 150], exitX: 2450, teacherX: 620, teacherRange: 134, enemySpeed: 1, reporterSpeed: 1
+            },
+            {
+                width: 2880, color: '#fff0d8', platforms: [[90, 320, 150], [390, 240, 150], [720, 300, 220], [1110, 190, 150], [1450, 290, 180], [1780, 220, 150], [2110, 300, 200], [2490, 200, 180]],
+                doorY: [220, 140, 200, 90, 190, 120], exitX: 2630, teacherX: 930, teacherRange: 145, enemySpeed: 1.08, reporterSpeed: 1.1
+            },
+            {
+                width: 3000, color: '#e9ffe9', platforms: [[140, 270, 260], [530, 330, 130], [790, 210, 170], [1080, 290, 130], [1350, 180, 220], [1710, 300, 150], [1980, 230, 240], [2360, 320, 150], [2630, 200, 180]],
+                doorY: [170, 250, 110, 190, 80, 200], exitX: 2770, teacherX: 1200, teacherRange: 152, enemySpeed: 1.16, reporterSpeed: 1.2
+            },
+            {
+                width: 3120, color: '#ffe9f2', platforms: [[100, 300, 120], [350, 180, 180], [680, 300, 120], [930, 150, 180], [1260, 270, 260], [1650, 190, 130], [1910, 310, 160], [2200, 230, 220], [2560, 140, 150], [2830, 290, 170]],
+                doorY: [200, 100, 200, 70, 170, 110], exitX: 2940, teacherX: 1500, teacherRange: 160, enemySpeed: 1.24, reporterSpeed: 1.25
+            },
+            {
+                width: 3240, color: '#f1eaff', platforms: [[80, 340, 130], [300, 260, 120], [550, 160, 150], [850, 300, 180], [1170, 220, 120], [1430, 120, 180], [1740, 280, 220], [2120, 170, 140], [2390, 310, 180], [2700, 210, 150], [3000, 290, 140]],
+                doorY: [240, 160, 60, 190, 120, 50], exitX: 3070, teacherX: 1700, teacherRange: 168, enemySpeed: 1.32, reporterSpeed: 1.3
+            },
+            {
+                width: 3360, color: '#fff5d9', platforms: [[120, 220, 180], [440, 320, 100], [680, 240, 110], [930, 120, 170], [1240, 300, 170], [1530, 210, 100], [1770, 100, 160], [2070, 280, 220], [2430, 180, 120], [2680, 320, 150], [2950, 230, 180], [3220, 140, 100]],
+                doorY: [120, 200, 140, 40, 190, 90], exitX: 3240, teacherX: 1820, teacherRange: 176, enemySpeed: 1.4, reporterSpeed: 1.35
+            },
+            {
+                width: 3480, color: '#e5f7ff', platforms: [[90, 310, 110], [330, 190, 160], [620, 330, 100], [850, 230, 150], [1130, 90, 130], [1390, 280, 210], [1740, 170, 110], [1980, 310, 160], [2260, 130, 180], [2590, 250, 120], [2830, 80, 170], [3150, 290, 180]],
+                doorY: [210, 110, 230, 110, 20, 170], exitX: 3340, teacherX: 1950, teacherRange: 184, enemySpeed: 1.48, reporterSpeed: 1.4
+            },
+            {
+                width: 3600, color: '#f5eaff', platforms: [[120, 160, 140], [380, 300, 100], [620, 200, 100], [860, 340, 130], [1110, 180, 180], [1410, 70, 120], [1670, 270, 150], [1950, 130, 130], [2220, 310, 180], [2530, 190, 100], [2780, 60, 150], [3060, 250, 170], [3350, 150, 120]],
+                doorY: [60, 200, 100, 240, 80, 10], exitX: 3460, teacherX: 2100, teacherRange: 192, enemySpeed: 1.56, reporterSpeed: 1.45
+            },
+            {
+                width: 3720, color: '#fff0e1', platforms: [[80, 290, 100], [300, 120, 130], [550, 280, 120], [800, 170, 100], [1040, 330, 120], [1280, 210, 140], [1540, 80, 110], [1800, 290, 150], [2080, 150, 100], [2320, 340, 120], [2560, 220, 130], [2840, 100, 150], [3140, 300, 130], [3420, 180, 160]],
+                doorY: [190, 20, 180, 70, 230, 110], exitX: 3560, teacherX: 2260, teacherRange: 200, enemySpeed: 1.64, reporterSpeed: 1.5
+            },
+            {
+                width: 3840, color: '#e8ffe8', platforms: [[100, 340, 90], [310, 220, 90], [520, 100, 100], [760, 300, 100], [1000, 180, 100], [1240, 60, 100], [1480, 280, 120], [1740, 140, 100], [1980, 330, 100], [2220, 210, 110], [2470, 90, 100], [2720, 300, 120], [2990, 160, 100], [3250, 40, 120], [3500, 260, 180]],
+                doorY: [240, 120, 10, 200, 80, 0], exitX: 3660, teacherX: 2400, teacherRange: 208, enemySpeed: 1.75, reporterSpeed: 1.6
+            }
+        ];
+
+        function createGeneratedQuestions(subject, levelNumber) {
+            const base = homeworkData[subject] || homeworkData.Math;
+            const variants = {
+                Math: [
+                    { q: `A school route has ${levelNumber + 3} rooms and each has 4 desks. How many desks?`, options: [String((levelNumber + 3) * 4), String((levelNumber + 3) * 3), String(levelNumber + 7), String((levelNumber + 3) + 4)], a: String((levelNumber + 3) * 4) },
+                    { q: `What is ${levelNumber * 7 + 18} - ${levelNumber + 5}?`, options: [String(levelNumber * 7 + 13), String(levelNumber * 7 + 23), String(levelNumber + 13), String(levelNumber * 7 + 5)], a: String(levelNumber * 7 + 13) },
+                    { q: `A meter is at ${levelNumber + 1} and rises by 2. What is the new reading?`, options: [String(levelNumber + 3), String(levelNumber + 1), String(levelNumber + 2), String(levelNumber + 4)], a: String(levelNumber + 3) },
+                    { q: `Which fraction is equal to ${levelNumber % 2 ? '1/2' : '2/4'}?`, options: ['1/4', '1/2', '3/4', '2/3'], a: '1/2' }
+                ],
+                ELA: [
+                    { q: 'Which sentence uses a semicolon correctly?', options: ['I ran; because I was late.', 'I ran; I was late.', 'I; ran I was late.', 'I ran I; was late.'], a: 'I ran; I was late.' },
+                    { q: 'In “The hallway whispered,” what device gives the hallway a human action?', options: ['Simile', 'Personification', 'Rhyme', 'Alliteration'], a: 'Personification' },
+                    { q: 'Which word is an adverb?', options: ['Carefully', 'Careful', 'Care', 'Cared'], a: 'Carefully' },
+                    { q: 'What is the best summary of a passage?', options: ['Every tiny detail', 'The main idea and key points', 'Only the title', 'A random opinion'], a: 'The main idea and key points' }
+                ],
+                Science: [
+                    { q: 'Which force pulls objects toward Earth?', options: ['Friction', 'Gravity', 'Magnetism', 'Buoyancy'], a: 'Gravity' },
+                    { q: 'What is the process by which liquid becomes gas?', options: ['Condensation', 'Evaporation', 'Freezing', 'Melting'], a: 'Evaporation' },
+                    { q: 'Which part of a cell contains genetic material?', options: ['Nucleus', 'Cell wall', 'Vacuole', 'Ribosome'], a: 'Nucleus' },
+                    { q: 'An object moving at a steady speed in a straight line has balanced…', options: ['Colors', 'Forces', 'Masses', 'Temperatures'], a: 'Forces' }
+                ],
+                Gym: [
+                    { q: 'Which training principle gradually increases challenge?', options: ['Overload', 'Inactivity', 'Dehydration', 'Skipping'], a: 'Overload' },
+                    { q: 'What does a pulse measure?', options: ['Heart beats', 'Lung size', 'Bone length', 'Body temperature'], a: 'Heart beats' },
+                    { q: 'Which is a component of physical fitness?', options: ['Flexibility', 'Laziness', 'Noise', 'Luck'], a: 'Flexibility' },
+                    { q: 'Why is recovery important after exercise?', options: ['It helps the body repair', 'It removes all skill', 'It stops hydration', 'It weakens muscles'], a: 'It helps the body repair' }
+                ],
+                Art: [
+                    { q: 'Which principle describes how light or dark a color appears?', options: ['Value', 'Texture', 'Balance', 'Pattern'], a: 'Value' },
+                    { q: 'A painting that shows objects arranged in a scene is a…', options: ['Still life', 'Blueprint', 'Map key', 'Timeline'], a: 'Still life' },
+                    { q: 'Which pair are complementary colors?', options: ['Red and green', 'Red and orange', 'Blue and purple', 'Yellow and orange'], a: 'Red and green' },
+                    { q: 'What does texture describe in artwork?', options: ['How a surface feels or looks', 'The artwork size only', 'The artist name', 'The frame price'], a: 'How a surface feels or looks' }
+                ],
+                Computer: [
+                    { q: 'What does a web browser display?', options: ['Web pages', 'Only music', 'Paper books', 'Lunch menus only'], a: 'Web pages' },
+                    { q: 'Which symbol commonly starts a comment in JavaScript?', options: ['//', '##', '<!--', '**'], a: '//' },
+                    { q: 'What is a strong password more likely to contain?', options: ['Mixed characters', 'Your first name only', 'The word password', 'One digit only'], a: 'Mixed characters' },
+                    { q: 'What does RAM help a computer do?', options: ['Hold active data', 'Print paper', 'Charge a battery', 'Cool the keyboard'], a: 'Hold active data' }
+                ],
+                Cafeteria: [
+                    { q: 'Which nutrient helps build and repair muscles?', options: ['Protein', 'Water vapor', 'Ink', 'Plastic'], a: 'Protein' },
+                    { q: 'Why should perishable food be kept cold?', options: ['To slow harmful bacteria', 'To make it heavier', 'To change its color', 'To remove all flavor'], a: 'To slow harmful bacteria' },
+                    { q: 'Which is a whole grain?', options: ['Brown rice', 'Candy bar', 'Soda', 'Butter'], a: 'Brown rice' },
+                    { q: 'What does a balanced meal include?', options: ['Several food groups', 'Only one candy', 'No water', 'Only salt'], a: 'Several food groups' }
+                ],
+                Music: [
+                    { q: 'What does tempo describe?', options: ['How fast music is played', 'How high a chair is', 'The song title', 'The instrument color'], a: 'How fast music is played' },
+                    { q: 'Which dynamic marking means very loud?', options: ['Fortissimo', 'Pianissimo', 'Ritardando', 'Adagio'], a: 'Fortissimo' },
+                    { q: 'A repeated musical idea is called a…', options: ['Motif', 'Paragraph', 'Polygon', 'Hypothesis'], a: 'Motif' },
+                    { q: 'Which family does the trumpet belong to?', options: ['Brass', 'String', 'Percussion', 'Keyboard'], a: 'Brass' }
+                ],
+                History: [
+                    { q: 'What is a primary source?', options: ['Evidence from the time studied', 'A modern guess', 'A fictional story only', 'A math formula'], a: 'Evidence from the time studied' },
+                    { q: 'What does a timeline show?', options: ['Events in chronological order', 'Only map distances', 'Weather by color', 'A list of foods'], a: 'Events in chronological order' },
+                    { q: 'Which invention greatly increased the spread of books?', options: ['Printing press', 'Compass only', 'Steam shovel', 'Light bulb'], a: 'Printing press' },
+                    { q: 'Why do historians compare multiple sources?', options: ['To check reliability', 'To make time stop', 'To avoid evidence', 'To change geography'], a: 'To check reliability' }
+                ],
+                Chemistry: [
+                    { q: 'What is the smallest unit of an element?', options: ['Atom', 'Organ', 'Planet', 'Pixel'], a: 'Atom' },
+                    { q: 'A substance with a pH of 7 is usually…', options: ['Neutral', 'Strongly acidic', 'Metallic', 'Frozen'], a: 'Neutral' },
+                    { q: 'What happens when many substances dissolve in water?', options: ['A solution forms', 'A planet forms', 'It becomes a solid instantly', 'The water vanishes'], a: 'A solution forms' },
+                    { q: 'Which state of matter keeps its own volume but takes its container shape?', options: ['Liquid', 'Solid', 'Gas', 'Plasma only'], a: 'Liquid' }
+                ],
+                MusicClass: [
+                    { q: 'What is the distance between two musical pitches called?', options: ['Interval', 'Chapter', 'Vector', 'Paragraph'], a: 'Interval' },
+                    { q: 'Which clef is commonly used for higher notes?', options: ['Treble clef', 'Bass clef', 'Rest clef', 'Drum clef'], a: 'Treble clef' },
+                    { q: 'What does a rest tell a musician to do?', options: ['Be silent', 'Play faster', 'Change instruments', 'Repeat the title'], a: 'Be silent' },
+                    { q: 'Which family includes drums and cymbals?', options: ['Percussion', 'Brass', 'Woodwind', 'String'], a: 'Percussion' }
+                ]
+            };
+            const levelVariants = variants[subject] || [];
+            return [...base, ...levelVariants].map(item => ({
+                q: `LEVEL ${levelNumber}: ${item.q}`,
+                options: [...item.options],
+                a: item.a
+            }));
+        }
+
         function setupGeneratedLevel(levelNumber) {
             const hubKey = `Level${levelNumber}Hub`;
-            const classSubjects = shuffleArray(['History', 'Chemistry', 'MusicClass', 'Math', 'Science', 'ELA', 'Art', 'Computer', 'Cafeteria', 'Gym'])
-                .slice(0, 6);
+            const layout = generatedLevelLayouts[levelNumber - 1] || generatedLevelLayouts[0];
+            const subjectPool = ['History', 'Chemistry', 'MusicClass', 'Math', 'Science', 'ELA', 'Art', 'Computer', 'Cafeteria', 'Gym'];
+            const classOrder = multiplayerSession
+                ? seededShuffleArray(subjectPool, (networkWorldSeed ^ Math.imul(levelNumber, 0x9e3779b1)) >>> 0)
+                : shuffleArray(subjectPool);
+            const classSubjects = classOrder.slice(0, 6);
             const generatedSubjects = classSubjects.map((subject, index) => `L${levelNumber}C${index + 1}`);
-            // Door y-values are set so each door rests directly on top of the
-            // platform beneath it (platforms sit at y: 300, 270, 310, 260, 300, 250),
-            // which also staggers the doors' heights instead of lining them up in a flat row.
-            const classDoorHeights = [200, 170, 210, 160, 200, 150];
+            const classDoorHeights = layout.doorY;
             const classDoors = generatedSubjects.map((subject, index) => ({
-                x: 260 + index * 380,
+                x: 170 + Math.round((layout.width - 650) * (index / 5)),
                 y: classDoorHeights[index % classDoorHeights.length],
                 w: 70,
                 h: 100,
@@ -1511,7 +2139,7 @@
                 label: `${classSubjects[index]} classroom`
             }));
             classDoors.push({
-                x: 2450,
+                x: layout.exitX,
                 y: 280,
                 w: 80,
                 h: 100,
@@ -1525,47 +2153,34 @@
 
             rooms[hubKey] = {
                 title: `LEVEL ${levelNumber}: ACADEMY WING`,
-                color: levelNumber % 2 ? '#e8f1ff' : '#fff0d8',
-                width: 2700,
+                color: layout.color,
+                width: layout.width,
                 doors: classDoors,
-                platforms: [
-                    { x: 0, y: 380, w: 2700, h: 70 },
-                    { x: 120, y: 300, w: 180, h: 20 },
-                    { x: 520, y: 270, w: 180, h: 20 },
-                    { x: 920, y: 310, w: 180, h: 20 },
-                    { x: 1320, y: 260, w: 190, h: 20 },
-                    { x: 1720, y: 300, w: 190, h: 20 },
-                    { x: 2120, y: 250, w: 190, h: 20 }
-                ],
+                platforms: [{ x: 0, y: 380, w: layout.width, h: 70 }, ...layout.platforms.map(([x, y, w]) => ({ x, y, w, h: 20 }))],
                 desk: null,
-                teacher: { x: 620, y: 330, range: 130 + levelNumber * 4, dir: 1, timer: 0, state: 'WRITING' },
+                teacher: { x: layout.teacherX, y: 330, range: layout.teacherRange, dir: 1, timer: 0, state: 'WRITING' },
                 enemies: [
-                    { x: 420, startX: 420, y: 330, w: 28, h: 38, dir: 1, speed: 90 + levelNumber * 8, phase: levelNumber },
-                    { x: 1180, startX: 1180, y: 330, w: 28, h: 38, dir: -1, speed: 105 + levelNumber * 8, phase: levelNumber + 2, chase: levelNumber > 5 },
-                    { x: 1980, startX: 1980, y: 330, w: 28, h: 38, dir: 1, speed: 115 + levelNumber * 8, phase: levelNumber + 4, chase: levelNumber > 7 }
+                    { x: Math.round(layout.width * 0.16), startX: Math.round(layout.width * 0.16), y: 330, w: 28, h: 38, dir: 1, speed: (90 + levelNumber * 8) * layout.enemySpeed, phase: levelNumber },
+                    { x: Math.round(layout.width * 0.43), startX: Math.round(layout.width * 0.43), y: 330, w: 28, h: 38, dir: -1, speed: (105 + levelNumber * 8) * layout.enemySpeed, phase: levelNumber + 2, chase: levelNumber > 3 },
+                    { x: Math.round(layout.width * 0.7), startX: Math.round(layout.width * 0.7), y: 330, w: 28, h: 38, dir: 1, speed: (115 + levelNumber * 8) * layout.enemySpeed, phase: levelNumber + 4, chase: levelNumber > 6 }
                 ],
                 reporters: [
-                    { x: 760, startX: 760, y: 330, dir: 1, speed: 55 + levelNumber * 3, range: 75, timer: 0, reported: false },
-                    { x: 1450, startX: 1450, y: 330, dir: -1, speed: 65 + levelNumber * 3, range: 75, timer: 0, reported: false }
+                    { x: Math.round(layout.width * 0.28), startX: Math.round(layout.width * 0.28), y: 330, dir: 1, speed: (55 + levelNumber * 3) * layout.reporterSpeed, range: 75, timer: 0, reported: false },
+                    { x: Math.round(layout.width * 0.62), startX: Math.round(layout.width * 0.62), y: 330, dir: -1, speed: (65 + levelNumber * 3) * layout.reporterSpeed, range: 75, timer: 0, reported: false }
                 ]
             };
 
             generatedSubjects.forEach((subject, index) => {
-                const sourceQuestions = homeworkData[classSubjects[index]] || homeworkData.Math;
-                homeworkData[subject] = sourceQuestions.map(item => ({
-                    q: `LEVEL ${levelNumber}: ${item.q}`,
-                    options: [...item.options],
-                    a: item.a
-                }));
+                homeworkData[subject] = createGeneratedQuestions(classSubjects[index], levelNumber);
                 rooms[`${hubKey}Class${index + 1}`] = {
                     title: `LEVEL ${levelNumber}: ${classSubjects[index].toUpperCase()}`,
                     color: ['#fff4d6', '#e6ffe6', '#f0e6ff', '#e6f2ff'][index],
                     width: 1200,
                     doors: [{ x: 20, y: 280, w: 50, h: 100, targetRoom: hubKey, targetX: 280 + index * 370, targetY: 300 }],
-                    platforms: [{ x: 0, y: 380, w: 1200, h: 70 }, { x: 140, y: 290, w: 180, h: 20 }, { x: 430, y: 220, w: 220, h: 20 }, { x: 820, y: 300, w: 220, h: 20 }],
+                    platforms: [{ x: 0, y: 380, w: 1200, h: 70 }, { x: 100 + (levelNumber * 23) % 120, y: 300 - (levelNumber % 3) * 20, w: 150, h: 20 }, { x: 390, y: 220 - (levelNumber % 4) * 20, w: 180, h: 20 }, { x: 720 + (levelNumber % 3) * 35, y: 290, w: 150 - Math.min(levelNumber * 4, 50), h: 20 }],
                     desk: { x: 500, y: 170, w: 60, h: 50, subject },
-                    teacher: { x: 620, y: 330, range: 120 + levelNumber * 5, dir: index % 2 ? -1 : 1, timer: 0, state: 'WRITING' },
-                    reporters: [{ x: 270, startX: 270, y: 330, dir: 1, speed: 45 + levelNumber * 3, range: 65, timer: 0, reported: false }]
+                    teacher: { x: 620, y: 330, range: 120 + levelNumber * 6, dir: index % 2 ? -1 : 1, timer: 0, state: 'WRITING' },
+                    reporters: [{ x: 270, startX: 270, y: 330, dir: 1, speed: 45 + levelNumber * 4, range: 65, timer: 0, reported: false }]
                 };
             });
 
@@ -1576,6 +2191,7 @@
         function startLevel2() {
             level = 2;
             setupGeneratedLevel(2);
+            resetTroubleMeter();
             energy = maxEnergy;
             sprintStamina = maxSprintStamina;
             player.sprintLocked = false;
@@ -1609,6 +2225,7 @@
 
             level++;
             const hubKey = setupGeneratedLevel(level);
+            resetTroubleMeter();
             energy = maxEnergy;
             sprintStamina = maxSprintStamina;
             player.sprintLocked = false;
@@ -1636,6 +2253,7 @@
         function showLevel1Complete() {
             gameState = 'LEVEL1_COMPLETE';
             isSlacking = false;
+            registerLevelCompletion();
             document.getElementById('levelCompleteOverlay').classList.remove('hidden');
             updateUI();
             playTone(880, 0.2);
@@ -1689,6 +2307,9 @@
         }
 
         function returnToMenu() {
+            closeMultiplayerConnections();
+            multiplayerPlayers = [];
+            remotePlayers = [];
             gameState = 'MENU';
             level = 1;
             isPaused = false;
@@ -1706,12 +2327,15 @@
             isPopQuiz = false;
             slackSeconds = 0;
             activeSeconds = 0;
+            resetTroubleMeter();
             player.x = 100;
             player.y = 300;
             document.getElementById('gameOverOverlay').classList.add('hidden');
             document.getElementById('levelCompleteOverlay').classList.add('hidden');
             document.getElementById('pauseOverlay').classList.add('hidden');
+            document.getElementById('multiplayerModal').classList.add('hidden');
             document.getElementById('startOverlay').classList.remove('hidden');
+            updateMultiplayerHud();
             document.getElementById('statusText').innerText = 'Status: Exploring School...';
             updateUI();
             draw();
@@ -1969,6 +2593,23 @@
             return copy;
         }
 
+        function seededShuffleArray(arr, seed) {
+            const copy = [...arr];
+            let state = seed >>> 0;
+            const random = () => {
+                state = (state + 0x6D2B79F5) >>> 0;
+                let value = state;
+                value = Math.imul(value ^ (value >>> 15), value | 1);
+                value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
+                return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
+            };
+            for (let index = copy.length - 1; index > 0; index--) {
+                const swapIndex = Math.floor(random() * (index + 1));
+                [copy[index], copy[swapIndex]] = [copy[swapIndex], copy[index]];
+            }
+            return copy;
+        }
+
         function openHomework(subject) {
             if (gameState !== 'PLAYING') return;
             gameState = 'HOMEWORK';
@@ -1983,8 +2624,9 @@
                 : `LEVEL ${level}: No answer hints. Read carefully!`;
 
             // Each visit gets a fresh random selection AND randomized answer order.
+            const questionCount = level >= 7 ? 4 : (level >= 4 ? 3 : 2);
             activeHomework = shuffleArray(homeworkData[subject])
-                .slice(0, Math.min(2, homeworkData[subject].length))
+                .slice(0, Math.min(questionCount, homeworkData[subject].length))
                 .map(item => ({ ...item, options: shuffleArray(item.options) }));
 
             container.innerHTML = "";
@@ -2140,7 +2782,7 @@
             if (player.hasMasterKey) abs.push('MasterKey');
             const sprintLabel = sprintTime > 0 ? ` Pass:${Math.ceil(sprintTime)}s` : ` Stamina:${Math.ceil(sprintStamina)}%${player.sprintLocked ? ' LOCKED' : ''}`;
             const completedClasses = activeLevelSubjects.filter(subject => homeworkDone[subject]).length;
-            document.getElementById('abilityLabel').innerText = `L${level} | Classes:${completedClasses}/${activeLevelSubjects.length} | ${abs.length > 0 ? abs.join(', ') : 'None'} | Coins:${coins} Food:${inventory.food} Pass:${inventory.hallPasses}${sprintLabel}`;
+            document.getElementById('abilityLabel').innerText = `L${level} | ${difficulty} | Classes:${completedClasses}/${activeLevelSubjects.length} | ${abs.length > 0 ? abs.join(', ') : 'None'} | Coins:${coins} Food:${inventory.food} Pass:${inventory.hallPasses}${sprintLabel}`;
             updateShopUI();
         }
 
@@ -2172,6 +2814,7 @@
 
         function triggerWin() {
             gameState = 'WIN';
+            registerLevelCompletion();
             document.getElementById('gameOverTitle').innerText = level === 10 ? "🎉 LEVEL 10 CLEAR! YOU ESCAPED!" : `🎉 LEVEL ${level} CLEAR!`;
             document.getElementById('gameOverTitle').className = "text-5xl font-black text-green-400 drop-shadow-[4px_4px_0px_#000] mb-4";
             document.getElementById('gameOverReason').innerText = level > 1
@@ -2196,6 +2839,108 @@
 
         function toggleEasterEgg() {
             document.getElementById('secretModal').classList.toggle('hidden');
+        }
+
+        function toggleAdminPanel() {
+            const modal = document.getElementById('adminModal');
+            modal.classList.remove('hidden');
+            if (adminAuthenticated) {
+                document.getElementById('adminLoginView').classList.add('hidden');
+                document.getElementById('adminControlsView').classList.remove('hidden');
+            } else {
+                document.getElementById('adminUsernameInput').focus();
+            }
+        }
+
+        function closeAdminPanel() {
+            document.getElementById('adminModal').classList.add('hidden');
+        }
+
+        function submitAdminLogin(event) {
+            event.preventDefault();
+            const username = document.getElementById('adminUsernameInput').value;
+            const password = document.getElementById('adminPasswordInput').value;
+            const message = document.getElementById('adminLoginMessage');
+            if (username !== adminUsername || password !== adminPassword) {
+                message.innerText = 'Access denied.';
+                document.getElementById('adminPasswordInput').select();
+                return;
+            }
+            adminAuthenticated = true;
+            document.getElementById('adminLoginView').classList.add('hidden');
+            document.getElementById('adminControlsView').classList.remove('hidden');
+            document.getElementById('adminStatus').innerText = 'Admin tools unlocked.';
+        }
+
+        function logoutAdmin() {
+            adminAuthenticated = false;
+            document.getElementById('adminUsernameInput').value = '';
+            document.getElementById('adminPasswordInput').value = '';
+            document.getElementById('adminLoginMessage').innerText = '';
+            document.getElementById('adminLoginView').classList.remove('hidden');
+            document.getElementById('adminControlsView').classList.add('hidden');
+        }
+
+        function adminSetStatus(message) {
+            document.getElementById('adminStatus').innerText = message;
+            updateUI();
+        }
+
+        function adminUnlockProgression() {
+            unlockedLevels.fill(true);
+            hardCompletedLevels.fill(true);
+            extremeUnlocked = true;
+            saveProgression();
+            updateLevelSelectUI();
+            adminSetStatus('All levels and Extreme difficulty unlocked.');
+        }
+
+        function adminUnlockAbilities() {
+            player.canDoubleJump = true;
+            player.canStealth = true;
+            player.canDash = true;
+            player.hasMasterKey = true;
+            adminSetStatus('All abilities unlocked for the current run.');
+        }
+
+        function adminCompleteObjectives() {
+            Object.keys(homeworkDone).forEach(subject => homeworkDone[subject] = true);
+            activeLevelSubjects.forEach(subject => homeworkDone[subject] = true);
+            adminSetStatus('All homework objectives marked complete.');
+        }
+
+        function adminResetTrouble() {
+            resetTroubleMeter();
+            adminSetStatus('Trouble Meter cleared.');
+        }
+
+        function adminGiveCoins() {
+            coins = Math.max(0, Number(document.getElementById('adminCoinsInput').value) || 0);
+            adminSetStatus(`Coins set to ${coins}.`);
+        }
+
+        function adminAddCoins() {
+            const amount = Math.max(0, Number(document.getElementById('adminCoinsInput').value) || 0);
+            coins += amount;
+            adminSetStatus(`Added ${amount} coins. Total: ${coins}.`);
+        }
+
+        function adminGiveSupplies() {
+            inventory.food = Math.max(0, Number(document.getElementById('adminFoodInput').value) || 0);
+            inventory.hallPasses = Math.max(0, Number(document.getElementById('adminPassInput').value) || 0);
+            adminSetStatus('Food and hall passes updated.');
+        }
+
+        function adminGiveHelper() {
+            inventory.helpers.push(document.getElementById('adminHelperSelect').value);
+            adminSetStatus('Mystery helper added to inventory.');
+        }
+
+        function adminRefillPlayer() {
+            energy = maxEnergy;
+            sprintStamina = maxSprintStamina;
+            player.sprintLocked = false;
+            adminSetStatus('Energy and sprint stamina refilled.');
         }
 
         function toggleChangelog() {
@@ -2234,6 +2979,7 @@
             }
             
             draw();
+            updateMultiplayer();
 
             if (gameState === 'PLAYING' || gameState === 'PAUSED' || gameState === 'HOMEWORK' || gameState === 'SHOP' || gameState === 'LEVEL1_COMPLETE' || gameState === 'HOMEWORK_COMPLETE') {
                 requestAnimationFrame(gameLoop);
@@ -2242,7 +2988,7 @@
 
         function update(dt) {
             gameTime += dt;
-            const difficulty = Math.min(2, 1.25 + gameTime / 120);
+            const difficultyPressure = Math.min(2, 1.25 + gameTime / 120);
             if (sprintTime > 0) sprintTime = Math.max(0, sprintTime - dt);
             if (sprintTime === 0) combo = 0; // Reset combo when sprint time is over
             if (spawnSafeTime > 0) spawnSafeTime = Math.max(0, spawnSafeTime - dt);
@@ -2470,7 +3216,7 @@
 
                 t.nextDecision ||= 1.5 + Math.random() * 2.5;
                 t.patrolSpeed ||= 30 + Math.random() * 35;
-                t.x += t.dir * t.patrolSpeed * difficulty * dt;
+                t.x += t.dir * t.patrolSpeed * difficultyPressure * getDifficultySettings().teacherSpeed * dt;
                 const teacherLimit = (room.width || canvas.width) - 60;
                 if (t.x < 60 || t.x > teacherLimit) {
                     t.x = Math.max(60, Math.min(teacherLimit, t.x));
@@ -2491,10 +3237,24 @@
                     if (Math.random() < 0.25) t.patrolSpeed = 24 + Math.random() * 55;
                 }
 
-                const alertRange = Math.min(t.range * 1.35, t.range * difficulty);
+                const alertRange = Math.min(t.range * 1.35, t.range * difficultyPressure);
                 if (t.state === 'LOOKING' && isSlacking && !player.canStealth && Math.abs((player.x + player.w / 2) - t.x) < alertRange) {
-                    triggerGameOver("👀 Teacher caught you slacking without a Stealth Hood!");
+                    teacherAlertTimer = Math.min(3, teacherAlertTimer + dt);
+                    troubleMeter = Math.min(3, troubleMeter + dt * getDifficultySettings().alertGain);
+                    document.getElementById('statusText').innerText = `Teacher spotted you! Trouble ${Math.ceil(troubleMeter)}/3`;
+                    if (troubleMeter >= 3) {
+                        triggerGameOver("👀 Three trouble marks! The teacher sent you to detention.");
+                        return;
+                    }
+                } else {
+                    troubleMeter = Math.max(0, troubleMeter - dt * getDifficultySettings().alertDecay);
+                    teacherAlertTimer = Math.max(0, teacherAlertTimer - dt);
                 }
+            }
+
+            if (!room.teacher) {
+                troubleMeter = Math.max(0, troubleMeter - dt * getDifficultySettings().alertDecay);
+                teacherAlertTimer = Math.max(0, teacherAlertTimer - dt);
             }
 
             // Gym Hazard Dodgeballs
@@ -2623,6 +3383,9 @@
             }
 
             // Draw Player Stick figure
+            remotePlayers.forEach(remote => {
+                if (remote.state && remote.state.level === level && remote.state.room === currentRoomKey) drawRemotePlayer(remote);
+            });
             drawPlayerStickman();
             drawParticles();
 
@@ -2965,6 +3728,44 @@
             ctx.restore();
         }
 
+        function drawRemotePlayer(remote) {
+            const state = remote.state;
+            const centerX = state.x + 12;
+            const headY = state.y + 15;
+            ctx.save();
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#000000';
+            ctx.fillStyle = remote.color || '#3b82f6';
+            ctx.beginPath();
+            ctx.arc(centerX, headY, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(centerX, headY + 12);
+            ctx.lineTo(centerX, headY + 30);
+            ctx.moveTo(centerX, headY + 18);
+            ctx.lineTo(centerX - 11, headY + 27);
+            ctx.moveTo(centerX, headY + 18);
+            ctx.lineTo(centerX + 11, headY + 27);
+            ctx.moveTo(centerX, headY + 30);
+            ctx.lineTo(centerX - 9, headY + 42);
+            ctx.moveTo(centerX, headY + 30);
+            ctx.lineTo(centerX + 9, headY + 42);
+            ctx.stroke();
+            ctx.textAlign = 'center';
+            ctx.font = 'bold 12px "Comic Sans MS"';
+            ctx.lineWidth = 3;
+            ctx.strokeStyle = '#ffffff';
+            ctx.strokeText(remote.name, centerX, state.y - 8);
+            ctx.fillStyle = '#000000';
+            ctx.fillText(remote.name, centerX, state.y - 8);
+            if (state.slacking) {
+                ctx.fillStyle = '#d62828';
+                ctx.fillText('SLACKING', centerX, state.y - 22);
+            }
+            ctx.restore();
+        }
+
         function drawPlayerStickman() {
             ctx.save();
             ctx.lineWidth = 3;
@@ -3032,8 +3833,10 @@
         function drawHUD() {
             const energyPercent = Math.round((energy / maxEnergy) * 100);
             const staminaPercent = Math.round((sprintStamina / maxSprintStamina) * 100);
+            const troublePercent = Math.round((troubleMeter / 3) * 100);
             const energyColor = energyPercent > 60 ? '#28c76f' : (energyPercent > 30 ? '#ffd43b' : '#ff4d4f');
             const staminaColor = staminaPercent > 45 ? '#36a3ff' : (staminaPercent > 15 ? '#ff9f43' : '#b66dff');
+            const troubleColor = troublePercent < 40 ? '#28c76f' : (troublePercent < 75 ? '#ffd43b' : '#ff4d4f');
             ctx.fillStyle = '#000000';
             ctx.font = 'bold 14px "Comic Sans MS"';
             ctx.fillText(`AWAKE ENERGY: ${energyPercent}%`, 580, 25);
@@ -3061,9 +3864,21 @@
             ctx.fillRect(580, 76, staminaPercent * 1.8, 12);
             ctx.strokeStyle = '#000000';
             ctx.strokeRect(580, 76, 180, 12);
+
+            ctx.fillStyle = '#000000';
+            ctx.font = 'bold 12px "Comic Sans MS"';
+            ctx.fillText(`TROUBLE METER: ${Math.ceil(troubleMeter)}/3`, 30, 25);
+            ctx.fillStyle = '#e0e0e0';
+            ctx.fillRect(30, 35, 180, 18);
+            ctx.fillStyle = troubleColor;
+            ctx.fillRect(30, 35, troublePercent * 1.8, 18);
+            ctx.strokeStyle = '#000000';
+            ctx.strokeRect(30, 35, 180, 18);
         }
 
+        loadProgression();
         loadOptions();
+        document.getElementById('multiplayerName').value = localStorage.getItem('ntg-player-name') || '';
         updateKeybindLabels();
         applyOptions();
         setupJoystick();
