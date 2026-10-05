@@ -1,4 +1,4 @@
-# Nicholas The Game (NTG Beta)
+# NTG Beta
 
 [Youtube](https://www.youtube.com/@pryzm3D) and [Tiktok](https://www.tiktok.com/@nickle746?is_from_webapp=1&sender_device=pc)
 
