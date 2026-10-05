@@ -6,6 +6,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NTG Beta</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Multiplayer API (PeerJS WebRTC for GitHub Pages P2P + Custom Server Fallback) -->
+    <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <script src="Multiplayer API/peer-engine.js"></script>
+    <script src="Multiplayer API/server-adapter.js"></script>
+    <script src="Multiplayer API/multiplayer-api.js"></script>
     <body><h1>Beta Stage 3/5</h1></body>
     <style>
         @import url('https://fonts.cdnfonts.com/css/comic-sans-ms');
@@ -1821,24 +1826,17 @@
             selectedLevel = Number(document.getElementById('levelOption').value) || selectedLevel;
             document.getElementById('multiplayerMenuStatus').innerText = `Making ${gameId === 'skyline' ? 'Skyline Scramble' : 'School Co-op'} room...`;
             try {
-                const response = await fetch('/api/rooms', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        name,
-                        gameId,
-                        level: selectedLevel,
-                        difficulty: document.getElementById('difficultyOption').value
-                    })
+                const data = await window.NTGMultiplayerAPI.createRoom({
+                    name,
+                    gameId,
+                    level: selectedLevel,
+                    difficulty: document.getElementById('difficultyOption').value
                 });
-                const data = await readMultiplayerResponse(response, 'Could not make a room.');
                 connectToMultiplayerRoom(data, name, 'host');
                 document.getElementById('multiplayerDirectoryModal').classList.add('hidden');
-                document.getElementById('multiplayerMenuStatus').innerText = `${data.gameName} room ${data.code} created. Click Invite to share the code.`;
+                document.getElementById('multiplayerMenuStatus').innerText = `${data.gameName} room ${data.code} created. Share code: ${data.code}`;
             } catch (error) {
-                document.getElementById('multiplayerMenuStatus').innerText = window.location.protocol === 'file:'
-                    ? 'Open http://localhost:3000 after starting the room server with node.'
-                    : (error.message || 'Could not reach the room server.');
+                document.getElementById('multiplayerMenuStatus').innerText = error.message || 'Could not make room.';
             }
         }
 
@@ -1853,10 +1851,9 @@
 
         async function refreshMultiplayerDirectory() {
             const status = document.getElementById('multiplayerDirectoryStatus');
-            status.innerText = 'Refreshing games and open rooms...';
+            status.innerText = 'Refreshing games and rooms...';
             try {
-                const response = await fetch('/api/directory');
-                const data = await readMultiplayerResponse(response, 'Could not load the multiplayer directory.');
+                const data = await window.NTGMultiplayerAPI.getDirectory();
 
                 const gameList = document.getElementById('multiplayerGameList');
                 gameList.replaceChildren(...data.games.map(game => {
@@ -1877,11 +1874,13 @@
                 }));
 
                 const roomList = document.getElementById('multiplayerOpenRooms');
-                const openRooms = data.rooms.filter(room => room.playerCount < room.maxPlayers);
+                const openRooms = (data.rooms || []).filter(room => room.playerCount < room.maxPlayers);
                 if (openRooms.length === 0) {
                     const empty = document.createElement('li');
                     empty.className = 'border-2 border-dashed border-black bg-white p-3 text-sm font-bold';
-                    empty.textContent = 'No open rooms yet. Host a game to start one.';
+                    empty.textContent = window.NTGMultiplayerAPI.getMode() === 'webrtc' 
+                        ? 'GitHub Pages P2P Mode Active: Host a game and share your 5-character code with friends!'
+                        : 'No open rooms yet. Host a game to start one.';
                     roomList.replaceChildren(empty);
                 } else {
                     roomList.replaceChildren(...openRooms.map(room => {
@@ -1908,9 +1907,9 @@
                         return item;
                     }));
                 }
-                status.innerText = `${data.games.length} games | ${openRooms.length} open rooms`;
+                status.innerText = `${data.games.length} games available`;
             } catch (error) {
-                status.innerText = error.message || 'Could not load the multiplayer directory.';
+                status.innerText = error.message || 'Could not load directory.';
             }
         }
 
@@ -1926,18 +1925,11 @@
             }
             status.innerText = 'Joining room...';
             try {
-                const response = await fetch('/api/rooms/join', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name, code })
-                });
-                const data = await readMultiplayerResponse(response, 'Could not join room.');
+                const data = await window.NTGMultiplayerAPI.joinRoom({ name, code });
                 connectToMultiplayerRoom(data, name, 'guest');
                 document.getElementById('multiplayerMenuStatus').innerText = `Joined room ${data.code}.`;
             } catch (error) {
-                status.innerText = window.location.protocol === 'file:'
-                    ? 'Open http://localhost:3000 after starting the room server with node.'
-                    : (error.message || 'Could not reach the room server.');
+                status.innerText = error.message || 'Could not join room.';
             }
         }
 
@@ -1953,44 +1945,6 @@
             lastNetworkStateSent = null;
             lastNetworkSendTime = 0;
             startGame();
-            connectToRoomEvents(multiplayerSession);
-        }
-
-        function connectToRoomEvents(session) {
-            const query = new URLSearchParams({ code: session.code, playerId: session.playerId });
-            const events = new EventSource(`/api/room/events?${query}`);
-            session.events = events;
-            events.onmessage = event => {
-                if (multiplayerSession !== session) return;
-                try {
-                    const update = JSON.parse(event.data);
-                    if (update.type === 'roster') updateRemoteRoster(update.players);
-                    else if (update.type === 'player') updateRemotePlayer(update.player);
-                    rescueNearbyGameOverPlayer();
-                } catch (error) {
-                    document.getElementById('multiplayerMenuStatus').innerText = 'Received an invalid room update.';
-                }
-            };
-            events.onerror = () => {
-                if (multiplayerSession === session) {
-                    document.getElementById('multiplayerHostStatus').innerText = 'Reconnecting to room updates...';
-                }
-            };
-        }
-
-        async function readMultiplayerResponse(response, fallbackMessage) {
-            const contentType = response.headers.get('content-type') || '';
-            if (!contentType.toLowerCase().includes('application/json')) {
-                throw new Error('This address returned a web page instead of the multiplayer API. Run `node Multiplayer/server.js` and open `http://localhost:3000`.');
-            }
-            let data;
-            try {
-                data = await response.json();
-            } catch (error) {
-                throw new Error('The multiplayer server returned invalid JSON. Restart it with `node Multiplayer/server.js`.');
-            }
-            if (!response.ok) throw new Error(data.error || fallbackMessage);
-            return data;
         }
 
         function updateMultiplayerHud() {
@@ -2035,7 +1989,6 @@
         }
 
         function clearMultiplayerSession() {
-            multiplayerSession?.events?.close();
             multiplayerSession = null;
             multiplayerPlayers = [];
             remotePlayers = [];
@@ -2043,26 +1996,10 @@
             updateMultiplayerHud();
         }
 
-        function closeMultiplayerConnections(unloading = false) {
-            const session = multiplayerSession;
-            if (!session) return;
-            multiplayerSession = null;
-            session.events?.close();
-            const body = JSON.stringify({ code: session.code, playerId: session.playerId });
-            if (unloading && navigator.sendBeacon) {
-                navigator.sendBeacon('/api/leave', new Blob([body], { type: 'application/json' }));
-            } else {
-                fetch('/api/leave', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body,
-                    keepalive: true
-                }).catch(() => {});
-            }
-            multiplayerPlayers = [];
-            remotePlayers = [];
-            lastNetworkStateSent = null;
-            updateMultiplayerHud();
+        function closeMultiplayerConnections() {
+            if (!multiplayerSession) return;
+            window.NTGMultiplayerAPI.leaveRoom();
+            clearMultiplayerSession();
         }
 
         function leaveMultiplayer() {
@@ -2081,21 +2018,27 @@
                 state.room !== previous.room || state.level !== previous.level || state.moving !== previous.moving;
             if (!changed && now - lastNetworkSendTime < 5000) return;
 
-            nextNetworkSend = now + 120;
-            networkSendBusy = true;
+            nextNetworkSend = now + 50;
             lastNetworkStateSent = state;
             lastNetworkSendTime = now;
-            fetch('/api/state', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ code: session.code, playerId: session.playerId, state })
-            }).then(response => {
-                if (response.status === 404) throw new Error('Room ended. Make or join another room.');
-            }).catch(error => {
-                if (multiplayerSession !== session) return;
-                document.getElementById('multiplayerMenuStatus').innerText = error.message || 'Room connection lost.';
-                clearMultiplayerSession();
-            }).finally(() => { networkSendBusy = false; });
+            window.NTGMultiplayerAPI.sendState(state);
+        }
+
+        if (window.NTGMultiplayerAPI) {
+            window.NTGMultiplayerAPI.onRoster(players => {
+                updateRemoteRoster(players);
+                rescueNearbyGameOverPlayer();
+            });
+            window.NTGMultiplayerAPI.onPlayer(player => {
+                updateRemotePlayer(player);
+                rescueNearbyGameOverPlayer();
+            });
+            window.NTGMultiplayerAPI.onDisconnect(msg => {
+                if (multiplayerSession) {
+                    document.getElementById('multiplayerMenuStatus').innerText = msg || 'Room session ended.';
+                    clearMultiplayerSession();
+                }
+            });
         }
 
         window.addEventListener('beforeunload', () => {
