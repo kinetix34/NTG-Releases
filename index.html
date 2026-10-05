@@ -4,14 +4,14 @@
     <link rel="icon" type="image/x-icon" href="other/icawn.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NTG Beta</title>
+    <title>NTG</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Multiplayer API (PeerJS WebRTC for GitHub Pages P2P + Custom Server Fallback) -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
-    <script src="Multiplayer API/peer-engine.js"></script>
-    <script src="Multiplayer API/server-adapter.js"></script>
-    <script src="Multiplayer API/multiplayer-api.js"></script>
-    <body><h1>Final Beta</h1></body>
+    <script src="Multiplayer%20API/peer-engine.js"></script>
+    <script src="Multiplayer%20API/server-adapter.js"></script>
+    <script src="Multiplayer%20API/multiplayer-api.js"></script>
+    <body><h1>Version 1.1</h1></body>
     <style>
         @import url('https://fonts.cdnfonts.com/css/comic-sans-ms');
 
@@ -503,7 +503,7 @@
         <div class="bg-[#000080] text-white px-3 py-1 flex justify-between items-center font-bold text-sm sm:text-base border-b-4 border-black">
             <div class="flex items-center gap-2">
                 <span class="inline-block w-4 h-4 bg-yellow-400 border border-black text-center text-xs text-black leading-none">🎨</span>
-                <span>NTG Beta.game</span>
+                <span>NTG.game</span>
             </div>
             <div class="flex gap-1">
                 <button onclick="toggleEasterEgg()" title="Secret file" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ secret_notes.txt ]</button>
@@ -578,93 +578,131 @@
             </div>
 
             <!-- START OVERLAY -->
-            <div id="startOverlay" class="absolute inset-0 bg-yellow-100/90 backdrop-blur-xs flex flex-col items-center justify-center p-6 text-center">
-                <h1 class="text-5xl sm:text-7xl font-extrabold tracking-widest text-red-600 drop-shadow-[4px_4px_0px_#000] mb-2 transform -rotate-2">
-                    NTG
-                </h1>
-                <p class="text-xl font-bold bg-white px-3 py-1 border-2 border-black shadow-[3px_3px_0px_#000] mb-6">
-                    Beta - A Metroidvania-style school adventure!
-                </p>
-
-                <div class="bg-white p-4 border-4 border-black max-w-md w-full mb-6 shadow-[6px_6px_0px_#000] text-left text-sm space-y-2">
-                    <p class="font-bold text-red-600 border-b-2 border-dashed border-black pb-1">METROIDVANIA RULES:</p>
-                    <p>🏃 <strong>Explore:</strong> Move through interconnected classrooms & hallways.</p>
-                    <p>📚 <strong>Worksheets:</strong> Every desk draws a fresh random quiz from a larger question pool!</p>
-                    <p>😴 <strong>Energy & Stealth:</strong> Slack off to regain awake energy, but don't get spotted by roaming teachers while doing it!</p>
-                    <p>🔑 <strong>Goal:</strong> Complete 4 core classes, explore bonus rooms, collect upgrades, then unlock the Principal Office and ESCAPE!</p>
+            <div id="startOverlay" class="absolute inset-0 bg-yellow-100/95 backdrop-blur-xs flex flex-col items-center overflow-y-auto p-3 sm:p-6 text-center z-30">
+                <!-- Header -->
+                <div class="mb-4">
+                    <h1 class="text-4xl sm:text-6xl font-extrabold tracking-widest text-red-600 drop-shadow-[4px_4px_0px_#000] transform -rotate-1 inline-block">
+                        NTG
+                    </h1>
+                    <span class="text-sm sm:text-lg font-bold bg-white px-3 py-1 border-2 border-black shadow-[3px_3px_0px_#000] ml-2 align-middle">
+                        Metroidvania School Adventure
+                    </span>
                 </div>
 
-                <div class="bg-cyan-100 border-4 border-black p-3 mb-4 w-full max-w-md shadow-[5px_5px_0px_#000] text-left">
-                    <h2 class="font-black text-lg">PLAY WITH FRIENDS</h2>
-                    <p class="text-xs font-bold mb-2">Create a room, share its code, and join up to 4 friends.</p>
-                    <label class="block text-xs font-black mb-1" for="multiplayerName">Player name</label>
-                    <input id="multiplayerName" class="multiplayer-input w-full mb-2" maxlength="16" autocomplete="nickname" placeholder="Your name">
-                    <div class="grid grid-cols-2 gap-2 mb-2">
-                        <button onclick="createMultiplayerRoom('school')" class="paint-button px-2 py-2 bg-green-300 font-black text-xs">HOST SCHOOL</button>
-                        <button onclick="createMultiplayerRoom('skyline')" class="paint-button px-2 py-2 bg-yellow-300 font-black text-xs">HOST SKYLINE SCRAMBLE</button>
-                    </div>
-                    <div class="flex gap-2">
-                        <input id="multiplayerCode" class="multiplayer-input w-24 text-center uppercase" maxlength="5" placeholder="CODE" aria-label="Room code">
-                        <button onclick="joinMultiplayerRoom()" class="paint-button flex-1 px-2 py-2 bg-blue-300 font-black text-xs">JOIN</button>
-                    </div>
-                    <button onclick="openMultiplayerDirectory()" class="paint-button mt-2 w-full px-2 py-2 bg-cyan-300 font-black text-xs">BROWSE MULTIPLAYER GAMES</button>
-                    <p id="multiplayerMenuStatus" class="text-xs font-bold mt-2 min-h-4">Create a room or enter a friend's 5-character code.</p>
-                </div>
+                <!-- 2-Column Responsive Grid -->
+                <div class="w-full max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+                    
+                    <!-- LEFT COLUMN: Singleplayer & Multiplayer Play Options -->
+                    <div class="space-y-4 flex flex-col">
+                        <!-- Singleplayer Enter Button -->
+                        <div class="bg-white border-4 border-black p-4 shadow-[6px_6px_0px_#000]">
+                            <h2 class="font-black text-lg mb-1 text-black">SINGLEPLAYER</h2>
+                            <p class="text-xs font-bold text-gray-700 mb-3">Play solo, explore rooms, solve worksheets, and escape!</p>
+                            <button onclick="startGame()" class="paint-button w-full text-xl sm:text-2xl font-extrabold py-3 bg-green-400 text-black hover:bg-green-300 transform active:scale-95 transition-all">
+                                ▶️ ENTER SCHOOL!
+                            </button>
+                        </div>
 
-                <button onclick="startGame()" class="paint-button text-2xl font-extrabold px-8 py-4 bg-green-400 text-black hover:bg-green-300 transform hover:scale-105">
-                    ▶️ ENTER SCHOOL!
-                </button>
-                <div class="bg-white border-4 border-black p-3 mt-3 w-full max-w-md shadow-[5px_5px_0px_#000] text-left options-panel">
-                    <label>Level
-                        <select id="levelOption" onchange="selectLevel(this.value)"></select>
-                    </label>
-                    <label>Difficulty
-                        <select id="difficultyOption" onchange="selectDifficulty(this.value)">
-                            <option value="Easy">Easy</option>
-                            <option value="Normal" selected>Normal</option>
-                            <option value="Hard">Hard</option>
-                            <option value="Extreme" disabled>Extreme (Locked)</option>
-                        </select>
-                    </label>
-                    <p id="progressionStatus" class="text-xs font-bold text-blue-800">Level 1 unlocked. Beat every level on Hard to unlock Extreme.</p>
-                </div>
-                <button onclick="toggleOptions()" class="paint-button mt-3 px-5 py-2 bg-blue-300 font-black">⚙ OPTIONS</button>
-                <div id="optionsPanel" class="hidden bg-white border-4 border-black p-4 mt-3 w-full max-w-md shadow-[5px_5px_0px_#000] options-panel">
-                    <label>Resolution
-                        <select id="resolutionOption" onchange="applyOptions()">
-                            <option value="640">640 x 360</option>
-                            <option value="800" selected>800 x 450</option>
-                            <option value="960">960 x 540</option>
-                        </select>
-                    </label>
-                    <label>Theme
-                        <select id="themeOption" onchange="applyOptions()">
-                            <option value="classic" selected>Classic Paint</option>
-                            <option value="ocean">Ocean Blue</option>
-                            <option value="sunset">Sunset Paper</option>
-                            <option value="mono">Mono CRT</option>
-                        </select>
-                    </label>
-                    <label>Max FPS
-                        <select id="fpsOption" onchange="applyOptions()">
-                            <option value="30">30 FPS</option>
-                            <option value="60" selected>60 FPS</option>
-                            <option value="120">120 FPS</option>
-                        </select>
-                    </label>
-                    <p id="optionsStatus" class="text-xs font-bold text-green-700">Options applied.</p>
-                    <div class="border-t-2 border-black pt-2 space-y-1">
-                        <p class="font-black text-sm">KEYBINDS: press a button, then press any key</p>
-                        <div class="keybind-row flex justify-between items-center"><span>Move Left</span><button id="bind-left" onclick="beginKeybindCapture('left')">ArrowLeft</button></div>
-                        <div class="keybind-row flex justify-between items-center"><span>Move Right</span><button id="bind-right" onclick="beginKeybindCapture('right')">ArrowRight</button></div>
-                        <div class="keybind-row flex justify-between items-center"><span>Jump</span><button id="bind-jump" onclick="beginKeybindCapture('jump')">W</button></div>
-                        <div class="keybind-row flex justify-between items-center"><span>Interact</span><button id="bind-interact" onclick="beginKeybindCapture('interact')">E</button></div>
-                        <div class="keybind-row flex justify-between items-center"><span>Slack</span><button id="bind-slack" onclick="beginKeybindCapture('slack')">Space</button></div>
-                        <div class="keybind-row flex justify-between items-center"><span>Food</span><button id="bind-food" onclick="beginKeybindCapture('food')">F</button></div>
-                        <div class="keybind-row flex justify-between items-center"><span>Hall Pass</span><button id="bind-pass" onclick="beginKeybindCapture('pass')">H</button></div>
-                        <div class="keybind-row flex justify-between items-center"><span>Sprint</span><button id="bind-sprint" onclick="beginKeybindCapture('sprint')">Shift Left</button></div>
-                        <div class="keybind-row flex justify-between items-center"><span>Dash</span><button id="bind-dash" onclick="beginKeybindCapture('dash')">Q</button></div>
+                        <!-- Multiplayer Box -->
+                        <div class="bg-cyan-100 border-4 border-black p-4 shadow-[6px_6px_0px_#000] flex-grow">
+                            <h2 class="font-black text-lg">PLAY WITH FRIENDS</h2>
+                            <p class="text-xs font-bold mb-2">Create a room, share its code, or join friends via WebRTC P2P.</p>
+                            
+                            <label class="block text-xs font-black mb-1" for="multiplayerName">Player Name</label>
+                            <input id="multiplayerName" class="multiplayer-input w-full mb-3" maxlength="16" autocomplete="nickname" placeholder="Your name">
+                            
+                            <div class="grid grid-cols-2 gap-2 mb-3">
+                                <button onclick="createMultiplayerRoom('school')" class="paint-button px-2 py-2.5 bg-green-300 font-black text-xs">HOST SCHOOL</button>
+                                <button onclick="createMultiplayerRoom('skyline')" class="paint-button px-2 py-2.5 bg-yellow-300 font-black text-xs">HOST SKYLINE</button>
+                            </div>
+                            
+                            <div class="flex gap-2 mb-2">
+                                <input id="multiplayerCode" class="multiplayer-input w-28 text-center uppercase font-mono font-bold" maxlength="5" placeholder="CODE" aria-label="Room code">
+                                <button onclick="joinMultiplayerRoom()" class="paint-button flex-1 px-2 py-2 bg-blue-300 font-black text-xs">JOIN ROOM</button>
+                            </div>
+                            
+                            <button onclick="openMultiplayerDirectory()" class="paint-button w-full px-2 py-2 bg-cyan-300 font-black text-xs">BROWSE MULTIPLAYER GAMES</button>
+                            <p id="multiplayerMenuStatus" class="text-xs font-bold mt-2 min-h-4 text-cyan-900">Create a room or enter a friend's 5-character code.</p>
+                        </div>
                     </div>
+
+                    <!-- RIGHT COLUMN: Level Select & Controls / Rules -->
+                    <div class="space-y-4 flex flex-col">
+                        <!-- Level Select & Difficulty -->
+                        <div class="bg-white border-4 border-black p-4 shadow-[6px_6px_0px_#000] options-panel">
+                            <h2 class="font-black text-lg mb-2">LEVEL & DIFFICULTY</h2>
+                            <div class="grid grid-cols-2 gap-3 mb-2">
+                                <label class="text-xs font-bold block">Level
+                                    <select id="levelOption" onchange="selectLevel(this.value)" class="w-full mt-1 border-2 border-black p-1"></select>
+                                </label>
+                                <label class="text-xs font-bold block">Difficulty
+                                    <select id="difficultyOption" onchange="selectDifficulty(this.value)" class="w-full mt-1 border-2 border-black p-1">
+                                        <option value="Easy">Easy</option>
+                                        <option value="Normal" selected>Normal</option>
+                                        <option value="Hard">Hard</option>
+                                        <option value="Extreme" disabled>Extreme (Locked)</option>
+                                    </select>
+                                </label>
+                            </div>
+                            <p id="progressionStatus" class="text-xs font-bold text-blue-800">Level 1 unlocked. Beat levels on Hard to unlock Extreme.</p>
+                        </div>
+
+                        <!-- Metroidvania Rules -->
+                        <div class="bg-white p-4 border-4 border-black shadow-[6px_6px_0px_#000] text-sm space-y-1.5">
+                            <p class="font-bold text-red-600 border-b-2 border-dashed border-black pb-1 text-xs uppercase tracking-wider">GAMEPLAY RULES:</p>
+                            <p class="text-xs">🏃 <strong>Explore:</strong> Move through interconnected classrooms & hallways.</p>
+                            <p class="text-xs">📚 <strong>Worksheets:</strong> Answer quiz questions at desks to earn passes!</p>
+                            <p class="text-xs">😴 <strong>Stealth:</strong> Slack off to regain energy without getting caught by teachers.</p>
+                            <p class="text-xs">🔑 <strong>Goal:</strong> Complete 4 core classes, get upgrades, unlock Principal Office & escape!</p>
+                        </div>
+
+                        <!-- Options & Keybinds Toggle -->
+                        <div class="bg-white border-4 border-black p-3 shadow-[6px_6px_0px_#000]">
+                            <button onclick="toggleOptions()" class="paint-button w-full px-4 py-2 bg-blue-300 font-black text-sm">
+                                ⚙ CONTROLS & OPTIONS
+                            </button>
+                            <div id="optionsPanel" class="hidden mt-3 pt-3 border-t-2 border-black options-panel space-y-2">
+                                <div class="grid grid-cols-3 gap-2 text-xs">
+                                    <label>Res:
+                                        <select id="resolutionOption" onchange="applyOptions()" class="w-full mt-0.5 border border-black text-xs">
+                                            <option value="640">640x360</option>
+                                            <option value="800" selected>800x450</option>
+                                            <option value="960">960x540</option>
+                                        </select>
+                                    </label>
+                                    <label>Theme:
+                                        <select id="themeOption" onchange="applyOptions()" class="w-full mt-0.5 border border-black text-xs">
+                                            <option value="classic" selected>Paint</option>
+                                            <option value="ocean">Ocean</option>
+                                            <option value="sunset">Sunset</option>
+                                            <option value="mono">Mono</option>
+                                        </select>
+                                    </label>
+                                    <label>FPS:
+                                        <select id="fpsOption" onchange="applyOptions()" class="w-full mt-0.5 border border-black text-xs">
+                                            <option value="30">30</option>
+                                            <option value="60" selected>60</option>
+                                            <option value="120">120</option>
+                                        </select>
+                                    </label>
+                                </div>
+                                <p id="optionsStatus" class="text-xs font-bold text-green-700">Options applied.</p>
+                                <div class="border-t border-black pt-2 space-y-1 max-h-48 overflow-y-auto">
+                                    <p class="font-black text-xs">KEYBINDS (Click to bind):</p>
+                                    <div class="keybind-row flex justify-between items-center text-xs"><span>Left</span><button id="bind-left" onclick="beginKeybindCapture('left')">ArrowLeft</button></div>
+                                    <div class="keybind-row flex justify-between items-center text-xs"><span>Right</span><button id="bind-right" onclick="beginKeybindCapture('right')">ArrowRight</button></div>
+                                    <div class="keybind-row flex justify-between items-center text-xs"><span>Jump</span><button id="bind-jump" onclick="beginKeybindCapture('jump')">W</button></div>
+                                    <div class="keybind-row flex justify-between items-center text-xs"><span>Interact</span><button id="bind-interact" onclick="beginKeybindCapture('interact')">E</button></div>
+                                    <div class="keybind-row flex justify-between items-center text-xs"><span>Slack</span><button id="bind-slack" onclick="beginKeybindCapture('slack')">Space</button></div>
+                                    <div class="keybind-row flex justify-between items-center text-xs"><span>Food</span><button id="bind-food" onclick="beginKeybindCapture('food')">F</button></div>
+                                    <div class="keybind-row flex justify-between items-center text-xs"><span>Pass</span><button id="bind-pass" onclick="beginKeybindCapture('pass')">H</button></div>
+                                    <div class="keybind-row flex justify-between items-center text-xs"><span>Sprint</span><button id="bind-sprint" onclick="beginKeybindCapture('sprint')">Shift</button></div>
+                                    <div class="keybind-row flex justify-between items-center text-xs"><span>Dash</span><button id="bind-dash" onclick="beginKeybindCapture('dash')">Q</button></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
@@ -935,11 +973,12 @@
         let gameState = 'MENU';
         let selectedLevel = 1;
         let difficulty = 'Normal';
-        let troubleMeter = 0;
+        let troubleMeter = 0; // 0, 1, or 2 strikes
+        let slackingCaughtCooldown = 0;
         let teacherAlertTimer = 0;
         let adminAuthenticated = false;
-        const adminUsername = 'admin';
-        const adminPassword = 'NTG-admin';
+        const adminUsername = 'Prayden-admin';
+        const adminPassword = 'Pancakes67!?';
         const progressionStorageKey = 'ntg-progression';
         let unlockedLevels = Array(10).fill(false);
         let hardCompletedLevels = Array(10).fill(false);
@@ -1029,7 +1068,12 @@
             dashDirection: 1,
             sprinting: false,
             sprintLocked: false,
-            sprintBoost: false
+            sprintBoost: false,
+            coyoteTimer: 0,
+            jumpBufferTimer: 0,
+            isWallSliding: false,
+            wallDir: 0,
+            groundPounding: false
         };
 
         let keys = {};
@@ -1194,15 +1238,17 @@
                 title: 'LEVEL 2: SECOND FLOOR', color: '#d9f0ff', width: 1600,
                 doors: [
                     { x: 40, y: 280, w: 50, h: 100, targetRoom: 'WestbridgeHub', targetX: 680, targetY: 300 },
-                    { x: 290, y: 200, w: 70, h: 100, targetRoom: 'HistoryClass', targetX: 100, targetY: 300 },
-                    { x: 980, y: 210, w: 70, h: 100, targetRoom: 'ChemistryClass', targetX: 100, targetY: 300 },
-                    { x: 1360, y: 160, w: 70, h: 100, targetRoom: 'MusicClass', targetX: 100, targetY: 300 },
-                    { x: 1470, y: 290, w: 70, h: 90, targetRoom: 'Level2Exit', targetX: 400, targetY: 320, reqCore: true, reqSecondFloor: true, label: 'Rooftop Stairwell' }
+                    { x: 235, y: 200, w: 70, h: 100, targetRoom: 'HistoryClass', targetX: 100, targetY: 300 },
+                    { x: 975, y: 210, w: 70, h: 100, targetRoom: 'ChemistryClass', targetX: 100, targetY: 300 },
+                    { x: 1370, y: 160, w: 70, h: 100, targetRoom: 'MusicClass', targetX: 100, targetY: 300 },
+                    { x: 1510, y: 280, w: 70, h: 100, targetRoom: 'Level2Exit', targetX: 400, targetY: 320, reqCore: true, reqSecondFloor: true, label: 'Rooftop Stairwell' }
                 ],
                 platforms: [
-                    { x: 0, y: 380, w: 1600, h: 70 }, { x: 180, y: 300, w: 180, h: 20 },
-                    { x: 560, y: 285, w: 180, h: 20 }, { x: 970, y: 310, w: 180, h: 20 },
-                    { x: 1350, y: 260, w: 170, h: 20 }
+                    { x: 0, y: 380, w: 1600, h: 70 },
+                    { x: 180, y: 300, w: 180, h: 20 },
+                    { x: 560, y: 285, w: 180, h: 20 },
+                    { x: 920, y: 310, w: 180, h: 20 },
+                    { x: 1320, y: 260, w: 170, h: 20 }
                 ],
                 desk: null, teacher: { x: 720, y: 330, range: 150, dir: 1, timer: 0, state: 'WRITING' },
                 enemies: [{ x: 350, y: 330, w: 28, h: 38, dir: 1, speed: 125, phase: 1 }, { x: 1120, y: 330, w: 28, h: 38, dir: -1, speed: 140, phase: 3 }],
@@ -1438,17 +1484,24 @@
                 setSlacking(true);
                 playTone(180, 0.04);
             }
-            if ((e.code === keybinds.jump || e.code === 'ArrowUp') && gameState === 'PLAYING') {
+            if ((e.code === keybinds.jump || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') && gameState === 'PLAYING') {
                 jumpPlayer();
             }
-            if (e.code === keybinds.interact && gameState === 'PLAYING') {
+            if ((e.code === keybinds.interact || e.code === 'KeyE') && gameState === 'PLAYING') {
                 interactObject();
             }
-            if ((e.code === keybinds.sprint || e.code === 'ShiftRight') && gameState === 'PLAYING') {
+            if ((e.code === keybinds.sprint || e.code === 'ShiftLeft' || e.code === 'ShiftRight') && gameState === 'PLAYING') {
                 setSprinting(true);
             }
-            if (e.code === keybinds.dash && gameState === 'PLAYING') {
+            if ((e.code === keybinds.dash || e.code === 'KeyQ') && gameState === 'PLAYING') {
                 dashPlayer();
+            }
+            if ((e.code === 'ArrowDown' || e.code === 'KeyS') && gameState === 'PLAYING' && !player.grounded) {
+                player.groundPounding = true;
+                player.vy = 850;
+                player.vx = 0;
+                spawnBurst(player.x + player.w / 2, player.y + player.h / 2, '#ef4444', 8);
+                playTone(180, 0.05);
             }
         });
 
@@ -1457,7 +1510,12 @@
             if (e.code === keybinds.slack) {
                 setSlacking(false);
             }
-            if (e.code === keybinds.sprint || e.code === 'ShiftRight') setSprinting(false);
+            if (e.code === keybinds.sprint || e.code === 'ShiftLeft' || e.code === 'ShiftRight') setSprinting(false);
+            if ((e.code === keybinds.jump || e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') && gameState === 'PLAYING') {
+                if (player.vy < -150) {
+                    player.vy *= 0.45;
+                }
+            }
         });
 
         function setSlacking(val) {
@@ -2375,12 +2433,28 @@
                 label: `Level ${levelNumber} exit`
             });
 
+            const doorPlatforms = classDoors.map(door => ({
+                x: Math.max(0, door.x - 35),
+                y: door.y + door.h,
+                w: door.w + 70,
+                h: 20
+            }));
+            const movingPlatforms = [
+                { x: 450, y: 250, w: 140, h: 20, speedX: 75 + levelNumber * 5, minX: 350, maxX: 750 },
+                { x: 1400, y: 220, w: 140, h: 20, speedY: 55 + levelNumber * 5, minY: 150, maxY: 300 }
+            ];
+
             rooms[hubKey] = {
                 title: `LEVEL ${levelNumber}: ACADEMY WING`,
                 color: layout.color,
                 width: layout.width,
                 doors: classDoors,
-                platforms: [{ x: 0, y: 380, w: layout.width, h: 70 }, ...layout.platforms.map(([x, y, w]) => ({ x, y, w, h: 20 }))],
+                platforms: [
+                    { x: 0, y: 380, w: layout.width, h: 70 },
+                    ...layout.platforms.map(([x, y, w]) => ({ x, y, w, h: 20 })),
+                    ...doorPlatforms,
+                    ...movingPlatforms
+                ],
                 desk: null,
                 teacher: { x: layout.teacherX, y: 330, range: layout.teacherRange, dir: 1, timer: 0, state: 'WRITING' },
                 enemies: [
@@ -2817,19 +2891,35 @@
         }
 
         function jumpPlayer() {
+            player.jumpBufferTimer = 0.12;
+        }
+
+        function executeJump() {
             const jumpMultiplier = multiplayerSession?.gameId === 'skyline' && skylinePowerups.highJump > 0 ? 1.45 : 1;
-            if (player.grounded) {
+            if (player.grounded || player.coyoteTimer > 0) {
                 player.vy = -560 * jumpMultiplier;
                 player.grounded = false;
+                player.coyoteTimer = 0;
                 player.doubleJumpsLeft = player.canDoubleJump ? 1 : 0;
                 spawnBurst(player.x + player.w / 2, player.y + player.h, '#ffffff', 5);
                 playTone(520, 0.04);
+                return true;
+            } else if (player.isWallSliding) {
+                player.vy = -540 * jumpMultiplier;
+                player.vx = -player.wallDir * 450;
+                player.isWallSliding = false;
+                player.doubleJumpsLeft = player.canDoubleJump ? 1 : 0;
+                spawnBurst(player.x + player.w / 2, player.y + player.h / 2, '#38bdf8', 12);
+                playTone(640, 0.05);
+                return true;
             } else if (player.doubleJumpsLeft > 0) {
                 player.vy = -500 * jumpMultiplier;
                 player.doubleJumpsLeft--;
                 spawnBurst(player.x + player.w / 2, player.y + player.h, '#7dd3fc', 8);
                 playTone(720, 0.04);
+                return true;
             }
+            return false;
         }
 
         function dashPlayer() {
@@ -3366,12 +3456,29 @@
             const room = rooms[currentRoomKey];
             if (updateSkylineArena(dt, room)) return;
 
+            // Update Timers
+            if (player.jumpBufferTimer > 0) player.jumpBufferTimer -= dt;
+            if (player.coyoteTimer > 0) player.coyoteTimer -= dt;
+
+            // Update Moving Platforms
+            (room.platforms || []).forEach(p => {
+                if (p.speedX) {
+                    p.x += (p.dirX || 1) * p.speedX * dt;
+                    if (p.x <= (p.minX || 0) || p.x + p.w >= (p.maxX || 3000)) p.dirX = (p.dirX || 1) * -1;
+                }
+                if (p.speedY) {
+                    p.y += (p.dirY || 1) * p.speedY * dt;
+                    if (p.y <= (p.minY || 100) || p.y >= (p.maxY || 380)) p.dirY = (p.dirY || 1) * -1;
+                }
+            });
+
             // Player movement controls
-            const moveSpeed = player.sprintBoost && sprintTime > 0 ? 430 : (sprintTime > 0 ? 360 : 220); // Adjust move speed based on sprint boost
-            const movingInput = Boolean(keys[keybinds.left] || keys['ArrowLeft'] || keys[keybinds.right] || keys['ArrowRight']);
+            const moveSpeed = player.sprintBoost && sprintTime > 0 ? 430 : (sprintTime > 0 ? 360 : 220);
+            const movingInput = Boolean(keys[keybinds.left] || keys['ArrowLeft'] || keys['KeyA'] || keys[keybinds.right] || keys['ArrowRight'] || keys['KeyD']);
             const onFloor = room.platforms.some(platform =>
                 platform.y === 380 && player.y >= platform.y - player.h - 40 && player.y <= platform.y - player.h + 10
             );
+
             if (player.sprinting && sprintTime <= 0 && movingInput) {
                 sprintStamina = Math.max(0, sprintStamina - 28 * dt);
                 if (sprintStamina === 0) {
@@ -3380,10 +3487,6 @@
                     document.getElementById('statusText').innerText = 'Sprint exhausted. Ease up to recover.';
                 }
             } else if (sprintTime <= 0 && sprintStamina < maxSprintStamina) {
-                // Regen now happens any time you're not actively sprinting, instead of only
-                // while explicitly slacking and standing still (which used to regen slower
-                // than sprinting drained it, making stamina feel like it never came back).
-                // Standing still or slacking still tops it up the fastest.
                 const idleRegen = !movingInput && (player.grounded || onFloor);
                 sprintStamina = Math.min(maxSprintStamina, sprintStamina + ((idleRegen ? 34 : 20) + (buddyNearby ? 12 : 0)) * dt);
                 if (player.sprintLocked && sprintStamina >= maxSprintStamina) {
@@ -3392,27 +3495,47 @@
                     document.getElementById('statusText').innerText = 'Sprint stamina full.';
                 }
             }
+
             const turboMultiplier = multiplayerSession?.gameId === 'skyline' && skylinePowerups.turbo > 0 ? 1.5 : 1;
             const normalSpeed = (player.sprinting && sprintStamina > 0 ? 300 : moveSpeed) * (buddyNearby ? 1.2 : 1) * turboMultiplier;
+            
             if (player.dashTime > 0) {
                 player.dashTime = Math.max(0, player.dashTime - dt);
                 player.vx = player.dashDirection * 1250;
-            } else if (keys[keybinds.left] || keys['ArrowLeft']) player.vx = -normalSpeed;
-            else if (keys[keybinds.right] || keys['ArrowRight']) player.vx = normalSpeed;
+                spawnBurst(player.x + (player.vx > 0 ? 0 : player.w), player.y + player.h / 2, '#7dd3fc', 3);
+            } else if (keys[keybinds.left] || keys['ArrowLeft'] || keys['KeyA']) player.vx = -normalSpeed;
+            else if (keys[keybinds.right] || keys['ArrowRight'] || keys['KeyD']) player.vx = normalSpeed;
             else player.vx *= 0.7;
 
             // Cooldowns
             if (player.dashCooldown > 0) player.dashCooldown -= dt;
             if (doorCooldown > 0) doorCooldown -= dt;
 
+            // Wall Slide Logic
+            const roomBoundsWidth = room.width || canvas.width;
+            const touchingLeftWall = (player.x <= 2 || room.platforms.some(p => Math.abs(player.x - (p.x + p.w)) < 4 && player.y + player.h > p.y && player.y < p.y + p.h)) && (keys[keybinds.left] || keys['ArrowLeft'] || keys['KeyA']);
+            const touchingRightWall = (player.x + player.w >= roomBoundsWidth - 2 || room.platforms.some(p => Math.abs((player.x + player.w) - p.x) < 4 && player.y + player.h > p.y && player.y < p.y + p.h)) && (keys[keybinds.right] || keys['ArrowRight'] || keys['KeyD']);
+            
+            player.isWallSliding = !player.grounded && player.vy > 0 && !player.groundPounding && (touchingLeftWall || touchingRightWall);
+            if (player.isWallSliding) {
+                player.wallDir = touchingRightWall ? 1 : -1;
+                player.vy = Math.min(player.vy, 110);
+                if (Math.random() < 0.3) spawnBurst(player.x + (touchingRightWall ? player.w : 0), player.y + player.h, '#e2e8f0', 2);
+            }
+
             // Gravity
-            player.vy += 1200 * dt;
+            if (player.groundPounding) {
+                player.vy = 850;
+            } else {
+                player.vy += 1200 * dt;
+            }
 
             // Apply position
             player.x += player.vx * dt;
             player.y += player.vy * dt;
 
             // Room Collisions with Platforms
+            const wasGrounded = player.grounded;
             player.grounded = false;
 
             room.doors.forEach(door => {
@@ -3427,24 +3550,56 @@
             room.platforms.forEach(p => {
                 if (p.brokenUntil > 0) return;
                 if (player.x + player.w > p.x && player.x < p.x + p.w &&
-                    player.y + player.h >= p.y && player.y + player.h <= p.y + p.h + player.vy * dt) {
+                    player.y + player.h >= p.y && player.y + player.h <= p.y + p.h + Math.max(20, player.vy * dt + 5)) {
                     player.y = p.y - player.h;
                     player.vy = 0;
                     player.grounded = true;
+                    player.coyoteTimer = 0.1;
+                    player.dashCooldown = 0; // Landing resets dash
+
+                    // Ground Pound Impact
+                    if (player.groundPounding) {
+                        player.groundPounding = false;
+                        spawnBurst(player.x + player.w / 2, player.y + player.h, '#ef4444', 20);
+                        playTone(200, 0.12);
+                        document.getElementById('statusText').innerText = '💥 DESK SLAM SHOCKWAVE!';
+                        // Stun enemies in room
+                        if (room.enemies) {
+                            room.enemies.forEach(enemy => {
+                                if (Math.abs(enemy.x - player.x) < 180) {
+                                    enemy.stunnedTimer = 2.0;
+                                }
+                            });
+                        }
+                    }
+
                     if (p.surface === 'spring') {
                         player.vy = -790;
                         player.grounded = false;
-                        spawnBurst(player.x + player.w / 2, player.y + player.h, '#57f3d2', 10);
+                        player.coyoteTimer = 0;
+                        player.doubleJumpsLeft = player.canDoubleJump ? 1 : 0;
+                        spawnBurst(player.x + player.w / 2, player.y + player.h, '#57f3d2', 12);
                         playTone(680, 0.05);
                     } else if (p.surface === 'boost') {
-                        player.vx = (p.direction || 1) * 520;
-                        spawnBurst(player.x + player.w / 2, player.y + player.h / 2, '#ffe66d', 7);
+                        player.vx = (p.direction || 1) * 560;
+                        spawnBurst(player.x + player.w / 2, player.y + player.h / 2, '#ffe66d', 8);
                     } else if (p.surface === 'crumble' && !p.crumbling) {
                         p.crumbling = true;
-                        p.crumbleTimer = 0.5;
+                        p.crumbleTimer = 0.4;
                     }
                 }
             });
+
+            if (wasGrounded && !player.grounded && player.vy >= 0) {
+                player.coyoteTimer = 0.1; // Coyote grace period
+            }
+
+            // Execute buffered jump if available
+            if (player.jumpBufferTimer > 0) {
+                if (executeJump()) {
+                    player.jumpBufferTimer = 0;
+                }
+            }
 
             // Canvas Boundary Clamp
             if (player.x < 0) player.x = 0;
@@ -3621,23 +3776,33 @@
                     if (Math.random() < 0.25) t.patrolSpeed = 24 + Math.random() * 55;
                 }
 
+                slackingCaughtCooldown = Math.max(0, slackingCaughtCooldown - dt);
                 const alertRange = Math.min(t.range * 1.35, t.range * difficultyPressure);
-                if (t.state === 'LOOKING' && isSlacking && !player.canStealth && Math.abs((player.x + player.w / 2) - t.x) < alertRange) {
-                    teacherAlertTimer = Math.min(3, teacherAlertTimer + dt);
-                    troubleMeter = Math.min(3, troubleMeter + dt * getDifficultySettings().alertGain);
-                    document.getElementById('statusText').innerText = `Teacher spotted you! Trouble ${Math.ceil(troubleMeter)}/3`;
-                    if (troubleMeter >= 3) {
-                        triggerGameOver("👀 Three trouble marks! The teacher sent you to detention.");
-                        return;
+                const isSpotted = t.state === 'LOOKING' && isSlacking && Math.abs((player.x + player.w / 2) - t.x) < alertRange;
+                
+                if (isSpotted) {
+                    teacherAlertTimer = Math.min(3, teacherAlertTimer + dt * 2);
+                    // Stealth Hood Nerf: 30% chance to dodge detection
+                    const stealthDodged = player.canStealth && Math.random() < 0.30;
+                    if (stealthDodged) {
+                        document.getElementById('statusText').innerText = '🥷 Stealth Hood dodged teacher scan! (30% chance)';
+                    } else if (slackingCaughtCooldown <= 0) {
+                        troubleMeter += 1;
+                        slackingCaughtCooldown = 2.0; // 2 sec cooldown before next strike
+                        if (troubleMeter === 1) {
+                            document.getElementById('statusText').innerText = '⚠️ Teacher caught you slacking! Strike 1/2!';
+                        } else if (troubleMeter >= 2) {
+                            document.getElementById('statusText').innerText = '🚨 Teacher caught you again! Strike 2/2!';
+                            triggerGameOver('👀 Two strikes! Teacher caught you slacking and sent you to detention.');
+                            return;
+                        }
                     }
                 } else {
-                    troubleMeter = Math.max(0, troubleMeter - dt * getDifficultySettings().alertDecay);
                     teacherAlertTimer = Math.max(0, teacherAlertTimer - dt);
                 }
             }
 
             if (!room.teacher) {
-                troubleMeter = Math.max(0, troubleMeter - dt * getDifficultySettings().alertDecay);
                 teacherAlertTimer = Math.max(0, teacherAlertTimer - dt);
             }
 
@@ -3823,11 +3988,19 @@
             ctx.save();
             ctx.lineWidth = 3;
             ctx.strokeStyle = '#102435';
-            ctx.fillStyle = colors[platform.surface] || '#8b5a2b';
+            ctx.fillStyle = (platform.speedX || platform.speedY) ? '#38bdf8' : (colors[platform.surface] || '#8b5a2b');
             ctx.fillRect(x, platform.y, platform.w, platform.h);
             ctx.strokeRect(x, platform.y, platform.w, platform.h);
 
-            if (platform.surface === 'spring') {
+            if (platform.speedX || platform.speedY) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(x + 4, platform.y + 3, platform.w - 8, 3);
+                ctx.fillStyle = '#0369a1';
+                ctx.font = 'bold 10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('ELEVATOR 🛗', x + platform.w / 2, platform.y + 15);
+                ctx.textAlign = 'left';
+            } else if (platform.surface === 'spring') {
                 ctx.strokeStyle = '#eaffff';
                 ctx.lineWidth = 2;
                 for (let mark = 12; mark < platform.w - 8; mark += 24) {
@@ -3969,12 +4142,42 @@
             ctx.lineWidth = 3;
             ctx.strokeStyle = '#000000';
 
-            const drawWindow = (x, y, color) => {
+            const now = Date.now();
+
+            const drawClock = (x, y) => {
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(x, y, 16, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+                // Clock hands
+                const timeAngle = (now / 1000) % 60;
+                const secRad = (timeAngle / 60) * Math.PI * 2 - Math.PI / 2;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + Math.cos(secRad) * 11, y + Math.sin(secRad) * 11);
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#ef4444';
+                ctx.stroke();
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 3;
+            };
+
+            const drawWindow = (x, y, skyColor) => {
                 ctx.fillStyle = '#b9efff';
                 ctx.fillRect(x, y, 110, 65);
                 ctx.strokeRect(x, y, 110, 65);
-                ctx.fillStyle = color;
+                ctx.fillStyle = skyColor;
                 ctx.fillRect(x + 8, y + 8, 94, 49);
+                // Sun or clouds in window
+                ctx.fillStyle = '#fde047';
+                ctx.beginPath();
+                ctx.arc(x + 80, y + 25, 12, 0, Math.PI * 2);
+                ctx.fill();
                 ctx.fillStyle = '#ffffff';
                 ctx.fillRect(x + 52, y + 8, 6, 49);
                 ctx.fillRect(x + 8, y + 30, 94, 6);
@@ -3985,145 +4188,243 @@
                 ctx.fillRect(x, y, 92, 58);
                 ctx.strokeRect(x, y, 92, 58);
                 ctx.fillStyle = color;
-                ctx.fillRect(x + 9, y + 9, 74, 18);
+                ctx.fillRect(x + 8, y + 8, 76, 18);
                 ctx.fillStyle = '#000000';
-                ctx.font = 'bold 10px monospace';
-                ctx.fillText(text, x + 10, y + 45);
+                ctx.font = 'black 11px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(text, x + 46, y + 44);
+                ctx.textAlign = 'left';
             };
 
             const drawLockers = (x, y, count) => {
                 for (let index = 0; index < count; index++) {
-                    ctx.fillStyle = index % 2 ? '#5e7fa3' : '#7698bd';
-                    ctx.fillRect(x + index * 42, y, 36, 100);
-                    ctx.strokeRect(x + index * 42, y, 36, 100);
-                    ctx.fillStyle = '#d7e6f2';
-                    ctx.fillRect(x + 25 + index * 42, y + 48, 5, 5);
+                    ctx.fillStyle = index % 2 ? '#3b82f6' : '#2563eb';
+                    ctx.fillRect(x + index * 42, y, 36, 105);
+                    ctx.strokeRect(x + index * 42, y, 36, 105);
+                    // Vents & handle
+                    ctx.fillStyle = '#1e40af';
+                    ctx.fillRect(x + 8 + index * 42, y + 10, 20, 3);
+                    ctx.fillRect(x + 8 + index * 42, y + 16, 20, 3);
+                    ctx.fillStyle = '#f3f4f6';
+                    ctx.fillRect(x + 26 + index * 42, y + 52, 6, 8);
+                    ctx.strokeRect(x + 26 + index * 42, y + 52, 6, 8);
                 }
             };
 
-            if (roomKey === 'Math') {
-                drawWindow(55, 75, '#7ed6ff');
-                drawPoster(640, 75, '#ff6666', 'COUNT IT!');
-                ctx.fillStyle = '#202b45';
-                ctx.fillRect(105, 180, 175, 75);
-                ctx.strokeRect(105, 180, 175, 75);
-                ctx.fillStyle = '#ffffff';
+            const drawChalkboard = (x, y, w, h, title, contentLines = []) => {
+                // Wooden frame
+                ctx.fillStyle = '#854d0e';
+                ctx.fillRect(x - 6, y - 6, w + 12, h + 12);
+                ctx.strokeRect(x - 6, y - 6, w + 12, h + 12);
+                // Green chalkboard
+                ctx.fillStyle = '#14532d';
+                ctx.fillRect(x, y, w, h);
+                ctx.strokeRect(x, y, w, h);
+                // Title chalk
+                ctx.fillStyle = '#fef08a';
                 ctx.font = 'bold 15px monospace';
-                ctx.fillText('2 + 2 = 4', 125, 210);
-                ctx.fillText('HOMEWORK', 125, 235);
+                ctx.fillText(title, x + 15, y + 24);
+                // Content lines
+                ctx.fillStyle = '#ffffff';
+                ctx.font = 'bold 12px monospace';
+                contentLines.forEach((line, idx) => {
+                    ctx.fillText(line, x + 15, y + 48 + idx * 20);
+                });
+            };
+
+            if (roomKey === 'Math') {
+                drawWindow(55, 70, '#38bdf8');
+                drawClock(400, 50);
+                drawChalkboard(105, 160, 220, 95, '📐 MATH 101', ['2 + 2 = 4', 'a² + b² = c²', 'π ≈ 3.14159']);
+                drawPoster(640, 70, '#ef4444', 'COUNT IT!');
+                // Math symbols decor on wall
+                ctx.fillStyle = '#cbd5e1';
+                ctx.font = 'bold 20px monospace';
+                ctx.fillText('∑', 480, 100);
+                ctx.fillText('√x', 530, 130);
+                ctx.fillText('÷', 580, 95);
             } else if (roomKey === 'ELA') {
                 drawWindow(70, 70, '#d5f4ff');
-                drawPoster(635, 75, '#ff9f43', 'READ!');
-                for (let index = 0; index < 5; index++) {
-                    ctx.fillStyle = index % 2 ? '#9a6645' : '#b77a50';
-                    ctx.fillRect(75 + index * 125, 315, 100, 42);
-                    ctx.strokeRect(75 + index * 125, 315, 100, 42);
-                    ctx.fillStyle = '#ffdb70';
-                    ctx.fillRect(86 + index * 125, 324, 30, 22);
+                drawClock(400, 50);
+                drawChalkboard(105, 160, 220, 95, '📖 ELA CLASS', ['Noun & Verb', 'Metaphor vs Simile', 'Read 20 mins!']);
+                drawPoster(635, 70, '#f97316', 'READ!');
+                // Bookshelves
+                for (let index = 0; index < 4; index++) {
+                    ctx.fillStyle = '#78350f';
+                    ctx.fillRect(75 + index * 140, 310, 105, 45);
+                    ctx.strokeRect(75 + index * 140, 310, 105, 45);
+                    // Colorful book spines
+                    const colors = ['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'];
+                    for (let b = 0; b < 6; b++) {
+                        ctx.fillStyle = colors[b % colors.length];
+                        ctx.fillRect(82 + index * 140 + b * 15, 318, 12, 30);
+                        ctx.strokeRect(82 + index * 140 + b * 15, 318, 12, 30);
+                    }
                 }
-            } else if (roomKey === 'HallwayCentral') {
-                drawLockers(70, 65, 6);
-                drawPoster(610, 72, '#7ee081', 'BE KIND');
-                drawPoster(610, 145, '#ffcc66', 'HALL PASS');
-            } else if (roomKey === 'Science') {
-                drawWindow(55, 65, '#a5f0cf');
-                drawPoster(630, 70, '#73d2de', 'SCIENCE!');
-                ctx.fillStyle = '#9b7653';
-                ctx.fillRect(70, 315, 170, 34);
-                ctx.strokeRect(70, 315, 170, 34);
-                ctx.fillStyle = '#8ff0b0';
-                ctx.fillRect(95, 285, 35, 30);
-                ctx.fillStyle = '#ff8c69';
-                ctx.fillRect(155, 275, 28, 40);
-                ctx.strokeRect(95, 285, 35, 30);
-                ctx.strokeRect(155, 275, 28, 40);
-            } else if (roomKey === 'Gym') {
-                drawPoster(65, 70, '#ff6b6b', 'MOVE!');
-                drawPoster(645, 70, '#70d6ff', 'TEAM!');
+            } else if (roomKey === 'HallwayCentral' || roomKey === 'HallwayEast' || roomKey === 'HallwayWest') {
+                drawLockers(60, 65, 8);
+                drawClock(480, 50);
+                drawPoster(620, 70, '#10b981', 'BE KIND');
+                drawPoster(620, 145, '#f59e0b', 'HALL PASS');
+                // School Motto Banner
+                ctx.fillStyle = '#8b5cf6';
+                ctx.fillRect(420, 110, 170, 35);
+                ctx.strokeRect(420, 110, 170, 35);
                 ctx.fillStyle = '#ffffff';
-                ctx.fillRect(80, 330, 640, 6);
-                ctx.fillRect(397, 270, 6, 100);
+                ctx.font = 'bold 11px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('PRISM HIGH SCHOOL', 505, 132);
+                ctx.textAlign = 'left';
+            } else if (roomKey === 'Science') {
+                drawWindow(55, 65, '#6ee7b7');
+                drawClock(400, 50);
+                drawChalkboard(110, 155, 210, 95, '🔬 LAB WORK', ['H₂O = Water', 'Photosynthesis', 'Safety Goggles!']);
+                drawPoster(630, 70, '#06b6d4', 'SCIENCE!');
+                // Science lab table & glowing bubbling beakers
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(70, 315, 180, 35);
+                ctx.strokeRect(70, 315, 180, 35);
+                // Beaker 1 (Green)
+                ctx.fillStyle = '#10b981';
+                ctx.fillRect(95, 280, 32, 35);
+                ctx.strokeRect(95, 280, 32, 35);
+                // Beaker 2 (Orange Flask)
+                ctx.fillStyle = '#f97316';
+                ctx.beginPath();
+                ctx.moveTo(170, 275);
+                ctx.lineTo(155, 315);
+                ctx.lineTo(185, 315);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+                // Animated Bubbles
+                const bY = 270 - (now / 40) % 25;
+                ctx.fillStyle = '#a7f3d0';
+                ctx.beginPath();
+                ctx.arc(110, bY, 4, 0, Math.PI * 2);
+                ctx.arc(170, bY + 5, 3, 0, Math.PI * 2);
+                ctx.fill();
+            } else if (roomKey === 'Gym') {
+                drawClock(400, 45);
+                drawPoster(65, 70, '#ef4444', 'MOVE!');
+                drawPoster(645, 70, '#3b82f6', 'TEAM!');
+                // Basketball Hoop
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(720, 140, 60, 50);
+                ctx.strokeRect(720, 140, 60, 50);
+                ctx.fillStyle = '#f97316';
+                ctx.fillRect(700, 175, 30, 6);
+                // Net
+                ctx.strokeStyle = '#9ca3af';
+                ctx.strokeRect(705, 181, 20, 25);
+                ctx.strokeStyle = '#000000';
+                // Gym Floor Markings
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(80, 345, 640, 5);
+                ctx.beginPath();
+                ctx.arc(400, 345, 40, Math.PI, 0);
+                ctx.stroke();
             } else if (roomKey === 'Art') {
-                drawWindow(55, 70, '#ffd0ef');
-                drawPoster(625, 70, '#f78fb3', 'CREATE!');
-                ctx.fillStyle = '#ff6b6b';
-                ctx.fillRect(90, 170, 30, 70);
-                ctx.fillStyle = '#ffd93d';
-                ctx.fillRect(125, 155, 30, 85);
-                ctx.fillStyle = '#6bcB77';
-                ctx.fillRect(160, 180, 30, 60);
-                ctx.strokeRect(90, 170, 100, 70);
+                drawWindow(55, 70, '#f472b6');
+                drawClock(400, 50);
+                drawPoster(625, 70, '#ec4899', 'CREATE!');
+                // Rainbow paint splatters on wall
+                const splatters = [
+                    { x: 120, y: 180, color: '#ef4444', r: 18 },
+                    { x: 160, y: 160, color: '#f59e0b', r: 22 },
+                    { x: 200, y: 190, color: '#10b981', r: 16 },
+                    { x: 230, y: 150, color: '#3b82f6', r: 20 }
+                ];
+                splatters.forEach(s => {
+                    ctx.fillStyle = s.color;
+                    ctx.beginPath();
+                    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+                    ctx.fill();
+                });
+                // Easels with paintings
+                ctx.fillStyle = '#78350f';
+                ctx.fillRect(90, 280, 8, 70);
+                ctx.fillRect(140, 280, 8, 70);
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(85, 290, 68, 45);
+                ctx.strokeRect(85, 290, 68, 45);
+                ctx.fillStyle = '#3b82f6';
+                ctx.fillRect(95, 300, 48, 25);
             } else if (roomKey === 'Computer') {
                 drawLockers(60, 65, 4);
-                drawPoster(625, 70, '#a78bfa', 'CODE!');
+                drawClock(400, 50);
+                drawPoster(625, 70, '#8b5cf6', 'CODE!');
                 for (let index = 0; index < 4; index++) {
-                    ctx.fillStyle = '#30343b';
-                    ctx.fillRect(75 + index * 175, 330, 75, 35);
-                    ctx.strokeRect(75 + index * 175, 330, 75, 35);
-                    ctx.fillStyle = '#62e6a6';
-                    ctx.fillRect(84 + index * 175, 338, 57, 18);
+                    ctx.fillStyle = '#1e293b';
+                    ctx.fillRect(75 + index * 175, 320, 80, 40);
+                    ctx.strokeRect(75 + index * 175, 320, 80, 40);
+                    // Glowing code screen
+                    ctx.fillStyle = '#10b981';
+                    ctx.fillRect(84 + index * 175, 327, 62, 22);
+                    ctx.fillStyle = '#052e16';
+                    ctx.font = 'bold 9px monospace';
+                    ctx.fillText('> npm dev', 88 + index * 175, 342);
                 }
             } else if (roomKey === 'Cafeteria') {
-                drawPoster(65, 70, '#ffb347', 'EAT UP!');
-                for (let index = 0; index < 4; index++) {
-                    ctx.fillStyle = '#d58b61';
-                    ctx.fillRect(75 + index * 180, 320, 125, 28);
-                    ctx.strokeRect(75 + index * 180, 320, 125, 28);
-                    ctx.fillStyle = '#ffffff';
-                    ctx.fillRect(92 + index * 180, 310, 12, 10);
-                    ctx.fillRect(116 + index * 180, 310, 12, 10);
+                drawClock(400, 50);
+                drawPoster(65, 70, '#f97316', 'EAT UP!');
+                // Vending Machine
+                ctx.fillStyle = '#dc2626';
+                ctx.fillRect(630, 240, 75, 115);
+                ctx.strokeRect(630, 240, 75, 115);
+                ctx.fillStyle = '#bfdbfe';
+                ctx.fillRect(640, 250, 55, 60);
+                ctx.strokeRect(640, 250, 55, 60);
+                ctx.fillStyle = '#facc15';
+                ctx.font = 'bold 10px monospace';
+                ctx.fillText('SNACKS', 645, 246);
+                // Dining tables
+                for (let index = 0; index < 3; index++) {
+                    ctx.fillStyle = '#b45309';
+                    ctx.fillRect(75 + index * 170, 320, 130, 28);
+                    ctx.strokeRect(75 + index * 170, 320, 130, 28);
+                    ctx.fillStyle = '#ef4444'; // Red apples
+                    ctx.beginPath();
+                    ctx.arc(95 + index * 170, 312, 6, 0, Math.PI * 2);
+                    ctx.arc(115 + index * 170, 312, 6, 0, Math.PI * 2);
+                    ctx.fill();
                 }
             } else if (roomKey === 'Music') {
-                drawWindow(60, 70, '#dfc7ff');
-                drawPoster(635, 70, '#c084fc', 'PLAY!');
-                ctx.fillStyle = '#8b5a2b';
-                ctx.fillRect(80, 320, 85, 42);
-                ctx.strokeRect(80, 320, 85, 42);
-                ctx.fillStyle = '#fff4c2';
-                for (let index = 0; index < 4; index++) ctx.fillRect(92 + index * 16, 330, 10, 14);
-            } else if (roomKey === 'Level2Hall') {
-                ctx.fillStyle = '#682c75';
-                ctx.fillRect(0, 65, 800, 14);
-                ctx.fillStyle = '#ff5d73';
-                ctx.fillRect(70, 95, 220, 55);
-                ctx.strokeRect(70, 95, 220, 55);
+                drawWindow(60, 70, '#c084fc');
+                drawClock(400, 50);
+                drawPoster(635, 70, '#a855f7', 'PLAY!');
+                // Grand Piano
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(80, 310, 95, 50);
+                ctx.strokeRect(80, 310, 95, 50);
                 ctx.fillStyle = '#ffffff';
-                ctx.font = 'bold 18px monospace';
-                ctx.fillText('DETENTION', 92, 130);
-                drawPoster(610, 75, '#ff5d73', 'RUN!');
-                for (let index = 0; index < 8; index++) {
-                    ctx.fillStyle = index % 2 ? '#ffdd55' : '#222222';
-                    ctx.fillRect(index * 100, 360, 50, 10);
+                for (let index = 0; index < 6; index++) {
+                    ctx.fillRect(92 + index * 13, 322, 10, 22);
+                    ctx.strokeRect(92 + index * 13, 322, 10, 22);
                 }
-            } else if (roomKey === 'SecondFloor') {
-                ctx.fillStyle = '#38627a';
+            } else if (roomKey === 'Level2Hall' || roomKey === 'SecondFloor') {
+                ctx.fillStyle = '#4c1d95';
                 ctx.fillRect(0, 65, 1600, 14);
-                drawPoster(220, 85, '#ffb347', 'HISTORY');
-                drawPoster(640, 85, '#73d2de', 'CHEMISTRY');
-                drawPoster(1040, 85, '#c084fc', 'MUSIC');
-                drawPoster(1410, 85, '#63e6be', 'ROOFTOP');
+                drawClock(400, 45);
+                drawPoster(220, 85, '#f97316', 'HISTORY');
+                drawPoster(640, 85, '#06b6d4', 'CHEMISTRY');
+                drawPoster(1040, 85, '#a855f7', 'MUSIC');
+                drawPoster(1410, 85, '#10b981', 'ROOFTOP');
                 for (let index = 0; index < 15; index++) {
-                    ctx.fillStyle = index % 2 ? '#d7e6f2' : '#7698bd';
+                    ctx.fillStyle = index % 2 ? '#93c5fd' : '#1d4ed8';
                     ctx.fillRect(100 + index * 100, 335, 64, 30);
                     ctx.strokeRect(100 + index * 100, 335, 64, 30);
                 }
-            } else if (roomKey.startsWith('Level') && roomKey.endsWith('Hub')) {
-                const roomWidth = rooms[roomKey].width || 2700;
-                ctx.fillStyle = '#243b53';
-                ctx.fillRect(0, 65, roomWidth, 14);
-                for (let index = 0; index < roomWidth / 180; index++) {
-                    ctx.fillStyle = index % 2 ? '#d7e6f2' : '#7698bd';
-                    ctx.fillRect(80 + index * 180, 338, 100, 26);
-                    ctx.strokeRect(80 + index * 180, 338, 100, 26);
-                }
             } else if (roomKey === 'Level2Exit') {
-                drawPoster(330, 75, '#63e6be', 'ESCAPE!');
-                ctx.fillStyle = '#63e6be';
+                drawPoster(330, 75, '#10b981', 'ESCAPE!');
+                ctx.fillStyle = '#10b981';
                 ctx.fillRect(285, 235, 230, 38);
                 ctx.strokeRect(285, 235, 230, 38);
-                ctx.fillStyle = '#000000';
+                ctx.fillStyle = '#ffffff';
                 ctx.font = 'bold 18px monospace';
-                ctx.fillText('FINAL EXIT', 330, 260);
+                ctx.textAlign = 'center';
+                ctx.fillText('FINAL ESCAPE EXIT', 400, 260);
+                ctx.textAlign = 'left';
             }
 
             ctx.restore();
@@ -4402,10 +4703,8 @@
         function drawHUD() {
             const energyPercent = Math.round((energy / maxEnergy) * 100);
             const staminaPercent = Math.round((sprintStamina / maxSprintStamina) * 100);
-            const troublePercent = Math.round((troubleMeter / 3) * 100);
             const energyColor = energyPercent > 60 ? '#28c76f' : (energyPercent > 30 ? '#ffd43b' : '#ff4d4f');
             const staminaColor = staminaPercent > 45 ? '#36a3ff' : (staminaPercent > 15 ? '#ff9f43' : '#b66dff');
-            const troubleColor = troublePercent < 40 ? '#28c76f' : (troublePercent < 75 ? '#ffd43b' : '#ff4d4f');
             ctx.fillStyle = '#000000';
             ctx.font = 'bold 14px "Comic Sans MS"';
             ctx.fillText(`AWAKE ENERGY: ${energyPercent}%`, 580, 25);
@@ -4436,13 +4735,28 @@
 
             ctx.fillStyle = '#000000';
             ctx.font = 'bold 12px "Comic Sans MS"';
-            ctx.fillText(`TROUBLE METER: ${Math.ceil(troubleMeter)}/3`, 30, 25);
+            ctx.fillText(`TROUBLE METER: ${troubleMeter}/2 STRIKES`, 30, 25);
+            // Bar background
             ctx.fillStyle = '#e0e0e0';
             ctx.fillRect(30, 35, 180, 18);
-            ctx.fillStyle = troubleColor;
-            ctx.fillRect(30, 35, troublePercent * 1.8, 18);
+            // Strike 1 (Left Half 0-90px)
+            if (troubleMeter >= 1) {
+                ctx.fillStyle = '#f59e0b';
+                ctx.fillRect(30, 35, 90, 18);
+            }
+            // Strike 2 (Right Half 90-180px)
+            if (troubleMeter >= 2) {
+                ctx.fillStyle = '#ef4444';
+                ctx.fillRect(120, 35, 90, 18);
+            }
+            // Outline & Center Divider
             ctx.strokeStyle = '#000000';
+            ctx.lineWidth = 2;
             ctx.strokeRect(30, 35, 180, 18);
+            ctx.beginPath();
+            ctx.moveTo(120, 35);
+            ctx.lineTo(120, 53);
+            ctx.stroke();
         }
 
         loadProgression();
