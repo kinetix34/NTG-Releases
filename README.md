@@ -4,14 +4,18 @@
 
 # Is there something new 👀
 Probably not
-## Version 1.2 - Small Update
-- Consistency update (there are platforms in places where there shouldn't be in L2+)
-- L2+ bug fixes (noise fix for random platforms)
-- Difficulty patches (more balanced)
-- More resolution options
-- More FPS options (240fps)
-- Coloring update (dynamic colors and not so flat)
-- Shameless promotion update 
+## Version 1.3 - Content Update
+- Better-spaced L2+ maps with distinct platform mechanics per level
+- Level map
+- Better teacher AI
+- Sec Cameras to catch you lacking
+- Animation overhaul: scanning cameras, expressive characters, animated abilities, particles, platforms, and (partially) UI
+- Finally fixed level 2 😭
+- Code has officially reached 5K lines. Seperated the seas
+- All keybinds should now be changable, first QoL update in eons 🥹
+- Animations update (implementing more later)
+- Quests (12 currently) give permanent passive gameplay buffs. Find out in game! ((:
+## Things that are broken
+- Scanning for ALL avalible servers (idk why the API is totally impeccable😤)
 # Upcoming
-- Animations??? 👀
 - Custom player model
