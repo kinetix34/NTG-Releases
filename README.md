@@ -1,14 +1,17 @@
 # NTG Stable
+## Shameless promotion
+[YouTube](https://www.youtube.com/@pryzm3D) and [TikTok](https://www.tiktok.com/@nickle746?is_from_webapp=1&sender_device=pc)
 
-[Youtube](https://www.youtube.com/@pryzm3D) and [Tiktok](https://www.tiktok.com/@nickle746?is_from_webapp=1&sender_device=pc)
-
-## Changelog
-Version 1.1.1 
-This version was a filler update, I really just needed to change some words and version numbers in game to accomidate for the actual release. v1.2 should be tonight at some point
-Version 1.2 (UPCOMING)
-- Consistency update
-- L2+ Bug fixes
-- Difficulty patches
+# Is there something new 👀
+Probably not
+## Version 1.2 - Small Update
+- Consistency update (there are platforms in places where there shouldn't be in L2+)
+- L2+ bug fixes (noise fix for random platforms)
+- Difficulty patches (more balanced)
 - More resolution options
-- More fps options
-- Coloring update
+- More FPS options (240fps)
+- Coloring update (dynamic colors and not so flat)
+- Shameless promotion update 
+# Upcoming
+- Animations??? 👀
+- Custom player model
