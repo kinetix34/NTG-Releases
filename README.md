@@ -4,18 +4,22 @@
 
 # Is there something new 👀
 Probably not
-## Version 1.3 - Content Update
-- Better-spaced L2+ maps with distinct platform mechanics per level
-- Level map
-- Better teacher AI
-- Sec Cameras to catch you lacking
-- Animation overhaul: scanning cameras, expressive characters, animated abilities, particles, platforms, and (partially) UI
-- Finally fixed level 2 😭
-- Code has officially reached 5K lines. Seperated the seas
-- All keybinds should now be changable, first QoL update in eons 🥹
-- Animations update (implementing more later)
-- Quests (12 currently) give permanent passive gameplay buffs. Find out in game! ((:
-## Things that are broken
-- Scanning for ALL avalible servers (idk why the API is totally impeccable😤)
+## v1.4 - Content/Patches
+- Made mobile controls more bearable
+- Made more fun level gen
+- Shop upgrade with new items
+- Levels 3 and up now have bonus rooms
+- Removed the redundant status bar
+- Skyline Scramble level 2
+- Hold down key while on ground for slide (also can now lay on floor like this)
+- Implemented some level features for ground pound
+## Things that are TOTALLY not broken
+- Scanning for ALL avalible servers, regardless of server type (idk why, the API is totally impeccable😤)
 # Upcoming
+## Expect 1.5 to be big and bountiful! hollon im cooking with that update name...
 - Custom player model
+- Skyline scramble level 3??? 👀
+- More levels, maybe...50?
+- API update 🫩 (boring but needed)
+- Defninite 1.5/6, Phone feature
+- Definite: Actual class time of about 30s or 1m

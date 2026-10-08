@@ -1,0 +1,1 @@
+                <button onclick="toggleChangelog()" title="View changelog" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ CHANGELOG ]</button>

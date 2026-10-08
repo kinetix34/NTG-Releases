@@ -18,6 +18,23 @@
             box-shadow: 6px 6px 0px #808080, 12px 12px 0px #000;
         }
 
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+
+        #appWindow.window-dragged {
+            max-height: 100dvh;
+            overflow: auto;
+        }
+
         .paint-button {
             border: 3px solid #000;
             background: #e0e0e0;
@@ -56,6 +73,13 @@
         #homeworkCompleteOverlay:not(.hidden),
         #levelCompleteOverlay:not(.hidden) {
             animation: ntg-modal-backdrop 0.18s ease-out both;
+        }
+
+        #gameOverOverlay:not(.hidden),
+        #homeworkModal:not(.hidden),
+        #homeworkCompleteOverlay:not(.hidden),
+        #levelCompleteOverlay:not(.hidden) {
+            z-index: 40;
         }
 
         #levelMapModal:not(.hidden) .level-map-panel,
@@ -275,6 +299,52 @@
             z-index: 20;
         }
 
+        .mobile-joystick-wrap {
+            display: grid;
+            place-items: center;
+            padding: 0.25rem;
+            border: 2px solid rgba(255, 255, 255, 0.62);
+            border-radius: 50%;
+            background: rgba(15, 23, 42, 0.28);
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .mobile-controls button.mobile-action {
+            display: grid;
+            place-items: center;
+            width: clamp(3rem, 8.5vmin, 3.8rem);
+            height: clamp(3rem, 8.5vmin, 3.8rem);
+            padding: 0.2rem;
+            border: 2px solid #111827;
+            border-radius: 1rem;
+            background: linear-gradient(145deg, #fff7b2, #facc15);
+            box-shadow: 0 4px 0 #78350f, 0 6px 12px rgba(0, 0, 0, 0.25);
+            color: #111827;
+            font-size: clamp(0.56rem, 1.8vmin, 0.78rem);
+            line-height: 1.05;
+            font-weight: 1000;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+            transition: transform 0.08s ease, box-shadow 0.08s ease, filter 0.08s ease;
+        }
+
+        .mobile-controls button.mobile-action-primary {
+            background: linear-gradient(145deg, #a7f3d0, #34d399);
+            box-shadow: 0 4px 0 #065f46, 0 6px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .mobile-controls button.mobile-action-hold {
+            background: linear-gradient(145deg, #bfdbfe, #60a5fa);
+            box-shadow: 0 4px 0 #1e3a8a, 0 6px 12px rgba(0, 0, 0, 0.25);
+        }
+
+        .mobile-controls button.mobile-action.is-pressed,
+        .mobile-controls button.mobile-action:active {
+            transform: translateY(3px) scale(0.96);
+            box-shadow: 0 1px 0 #111827, 0 2px 5px rgba(0, 0, 0, 0.2);
+            filter: brightness(0.94);
+        }
+
         @media (pointer: coarse) {
             html,
             body {
@@ -374,44 +444,83 @@
             }
         }
 
-        .mobile-controls button {
-            width: clamp(2.75rem, 10dvh, 4rem);
-            height: clamp(2.75rem, 10dvh, 4rem);
-            border: 3px solid #000;
-            background: #fff36b;
-            box-shadow: 3px 3px 0 #000;
-            font-weight: 900;
-            touch-action: none;
-        }
-
         .mobile-action-grid {
             display: grid;
-            grid-template-columns: repeat(2, clamp(2.75rem, 10dvh, 4rem));
-            gap: clamp(0.3rem, 1.2dvh, 0.6rem);
+            grid-template-columns: repeat(3, clamp(3rem, 8.5vmin, 3.8rem));
+            gap: clamp(0.25rem, 1.1vmin, 0.55rem);
+            padding: 0.35rem;
+            border: 2px solid rgba(255, 255, 255, 0.62);
+            border-radius: 1.1rem;
+            background: rgba(15, 23, 42, 0.34);
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.25);
         }
 
         .joystick {
-            width: clamp(6rem, 24dvh, 10rem);
-            height: clamp(6rem, 24dvh, 10rem);
-            border: 4px solid #000;
+            width: clamp(5.2rem, 20vmin, 8rem);
+            height: clamp(5.2rem, 20vmin, 8rem);
+            border: 3px solid #111827;
             border-radius: 50%;
-            background: rgba(255, 243, 107, 0.82);
-            box-shadow: 4px 4px 0 #000;
+            background:
+                radial-gradient(circle at center, rgba(255, 255, 255, 0.42) 0 2px, transparent 3px),
+                radial-gradient(circle, rgba(191, 219, 254, 0.9), rgba(59, 130, 246, 0.9));
+            box-shadow: inset 0 2px 10px rgba(255, 255, 255, 0.45), 0 5px 0 #1e3a8a, 0 8px 14px rgba(0, 0, 0, 0.3);
             touch-action: none;
             position: relative;
+            overflow: hidden;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .joystick-knob {
-            width: clamp(2.5rem, 9dvh, 4rem);
-            height: clamp(2.5rem, 9dvh, 4rem);
-            border: 3px solid #000;
+            width: 43%;
+            height: 43%;
+            border: 3px solid #172554;
             border-radius: 50%;
-            background: #c8e7ff;
+            background: radial-gradient(circle at 35% 28%, #ffffff, #dbeafe 40%, #60a5fa);
+            box-shadow: 0 3px 0 #1e40af, 0 5px 10px rgba(15, 23, 42, 0.35);
             position: absolute;
             left: 50%;
             top: 50%;
             transform: translate(-50%, -50%);
             pointer-events: none;
+            transition: box-shadow 0.1s ease;
+        }
+
+        .joystick-direction {
+            position: absolute;
+            top: 50%;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.7rem;
+            transform: translateY(-50%);
+            pointer-events: none;
+        }
+
+        .joystick-direction-left {
+            left: 8%;
+        }
+
+        .joystick-direction-right {
+            right: 8%;
+        }
+
+        .shop-panel {
+            max-height: calc(100% - 1rem);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+        }
+
+        .shop-grid {
+            max-height: min(48dvh, 25rem);
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            padding: 0.2rem 0.35rem 0.35rem 0.1rem;
+        }
+
+        @media (pointer: coarse) {
+            .mobile-controls {
+                bottom: max(0.75rem, env(safe-area-inset-bottom));
+                left: max(0.75rem, env(safe-area-inset-left));
+                right: max(0.75rem, env(safe-area-inset-right));
+            }
         }
 
         @media (pointer: coarse) and (max-height: 600px) {
@@ -421,30 +530,33 @@
             }
 
             .mobile-controls {
-                bottom: 0.5rem;
-                left: 0.5rem;
-                right: 0.5rem;
-            }
-
-            .mobile-controls button {
-                width: clamp(2.7rem, 11dvh, 3.6rem);
-                height: clamp(2.7rem, 11dvh, 3.6rem);
-                font-size: 0.65rem;
+                bottom: max(0.5rem, env(safe-area-inset-bottom));
+                left: max(0.5rem, env(safe-area-inset-left));
+                right: max(0.5rem, env(safe-area-inset-right));
             }
 
             .mobile-action-grid {
-                grid-template-columns: repeat(2, clamp(2.7rem, 11dvh, 3.6rem));
-                gap: 0.35rem;
+                grid-template-columns: repeat(3, clamp(3rem, 8.5vmin, 3.35rem));
+                gap: 0.3rem;
             }
 
             .joystick {
-                width: clamp(5.5rem, 23dvh, 8rem);
-                height: clamp(5.5rem, 23dvh, 8rem);
+                width: clamp(4.8rem, 19vmin, 7rem);
+                height: clamp(4.8rem, 19vmin, 7rem);
+            }
+        }
+
+        @media (pointer: coarse) and (max-width: 900px) and (orientation: landscape) {
+            .shop-panel {
+                width: min(100%, 48rem);
+                max-height: calc(100dvh - 0.75rem);
+                padding: 0.65rem;
             }
 
-            .joystick-knob {
-                width: clamp(2.25rem, 9dvh, 3.2rem);
-                height: clamp(2.25rem, 9dvh, 3.2rem);
+            .shop-grid {
+                max-height: 45dvh;
+                grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+                gap: 0.45rem;
             }
         }
 
@@ -493,34 +605,8 @@
                 max-height: calc(100dvh - 8.5rem) !important;
             }
 
-            #desktopControlsBar,
-            #statusBar {
-                display: none;
-            }
-
             .mobile-controls.md\:hidden {
                 display: flex;
-            }
-
-            .mobile-controls button {
-                width: clamp(2.7rem, 11dvh, 3.6rem);
-                height: clamp(2.7rem, 11dvh, 3.6rem);
-                font-size: 0.65rem;
-            }
-
-            .mobile-action-grid {
-                grid-template-columns: repeat(2, clamp(2.7rem, 11dvh, 3.6rem));
-                gap: 0.35rem;
-            }
-
-            .joystick {
-                width: clamp(5.5rem, 23dvh, 8rem);
-                height: clamp(5.5rem, 23dvh, 8rem);
-            }
-
-            .joystick-knob {
-                width: clamp(2.25rem, 9dvh, 3.2rem);
-                height: clamp(2.25rem, 9dvh, 3.2rem);
             }
 
             #homeworkModal {

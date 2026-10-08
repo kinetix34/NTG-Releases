@@ -92,6 +92,8 @@
         let frameInterval = 1000 / maxFps;
         let lastFrameTime = 0;
         let capturingKeybind = null;
+        let mobileMoveAxis = 0;
+        const mobileActionPointers = new Map();
         let multiplayerSession = null;
         let multiplayerPlayers = [];
         let remotePlayers = [];
@@ -105,6 +107,8 @@
         let skylinePowerups = { turbo: 0, highJump: 0, shield: 0 };
         let skylineCrystals = 0;
         let skylineScore = 0;
+        let skylineLevel = 1;
+        let skylineLevelStartScore = 0;
         let skylineHudText = '';
         const optionsStorageKey = 'ntg-options';
         const keybinds = {
@@ -151,6 +155,12 @@
             isWallSliding: false,
             wallDir: 0,
             groundPounding: false,
+            isSliding: false,
+            slideTimer: 0,
+            slideUsedUntilRelease: false,
+            slideParticleTimer: 0,
+            slidePose: 0,
+            slidePoseVelocity: 0,
             landBounce: 0
         };
 
@@ -422,7 +432,7 @@
                 ],
                 pickups: [
                     { type: 'turbo', x: 485, y: 230, respawn: 0, active: true },
-                    { type: 'high-jump', x: 1005, y: 260, respawn: 0, active: true },
+                    { type: 'highJump', x: 1005, y: 260, respawn: 0, active: true },
                     { type: 'shield', x: 1560, y: 145, respawn: 0, active: true }
                 ],
                 crystals: [
@@ -446,6 +456,75 @@
             if (floor) floor.w = Math.max(floor.w, room.width);
             if (room.enemies) room.enemies.forEach(enemy => enemy.startX ??= enemy.x);
         });
+
+        function setMovementChallenges(room, slideGateX, poundTargetX, poundReward = 4, gateWidth = 96) {
+            room.slideGates = [{
+                x: slideGateX, y: 336, w: gateWidth, h: 20, entered: false, rewarded: false
+            }];
+            room.poundTargets = [{
+                x: poundTargetX, y: 354, w: 38, h: 26, broken: false, reward: poundReward
+            }];
+        }
+
+        function resetMovementChallenges(room) {
+            (room.slideGates || []).forEach(gate => {
+                gate.entered = false;
+                gate.rewarded = false;
+            });
+            (room.poundTargets || []).forEach(target => { target.broken = false; });
+        }
+
+        setMovementChallenges(rooms.Math, 420, 630);
+        setMovementChallenges(rooms.SecondFloor, 790, 1190);
+        setMovementChallenges(rooms.WestbridgeHub, 365, 675);
+        setMovementChallenges(rooms.Level2Exit, 165, 590);
+
+        const skylineArenaLevelOne = {
+            title: rooms.MultiplayerArena.title,
+            color: rooms.MultiplayerArena.color,
+            width: rooms.MultiplayerArena.width,
+            platforms: rooms.MultiplayerArena.platforms,
+            pickups: rooms.MultiplayerArena.pickups,
+            crystals: rooms.MultiplayerArena.crystals,
+            hazards: rooms.MultiplayerArena.hazards,
+            goal: rooms.MultiplayerArena.goal
+        };
+        const skylineArenaLevelTwo = {
+            title: 'SKYLINE SCRAMBLE: NIGHT SHIFT',
+            color: '#24294d',
+            width: 2800,
+            platforms: [
+                { x: 0, y: 380, w: 2800, h: 70, surface: 'floor' },
+                { x: 185, y: 320, w: 125, h: 18, surface: 'spring' },
+                { x: 420, y: 270, w: 135, h: 18, surface: 'boost', direction: 1 },
+                { x: 680, y: 215, w: 120, h: 18, surface: 'crumble' },
+                { x: 895, y: 300, w: 130, h: 18, surface: 'spring' },
+                { x: 1135, y: 245, w: 140, h: 18, surface: 'boost', direction: -1 },
+                { x: 1390, y: 180, w: 125, h: 18, surface: 'crumble' },
+                { x: 1635, y: 275, w: 135, h: 18, surface: 'spring' },
+                { x: 1880, y: 215, w: 135, h: 18, surface: 'boost', direction: 1 },
+                { x: 2135, y: 155, w: 125, h: 18, surface: 'crumble' },
+                { x: 2370, y: 250, w: 145, h: 18, surface: 'spring' },
+                { x: 2600, y: 195, w: 130, h: 18, surface: 'boost', direction: -1 }
+            ],
+            pickups: [
+                { type: 'turbo', x: 465, y: 230, respawn: 0, active: true },
+                { type: 'highJump', x: 1175, y: 205, respawn: 0, active: true },
+                { type: 'shield', x: 2180, y: 115, respawn: 0, active: true }
+            ],
+            crystals: [
+                { x: 350, y: 295, collected: false },
+                { x: 745, y: 180, collected: false },
+                { x: 1450, y: 145, collected: false },
+                { x: 2450, y: 220, collected: false }
+            ],
+            hazards: [
+                { x: 590, y: 342, w: 34, h: 28, minX: 535, maxX: 850, speed: 140, direction: 1, phase: 0 },
+                { x: 1300, y: 342, w: 34, h: 28, minX: 1240, maxX: 1580, speed: 155, direction: -1, phase: 2 },
+                { x: 2040, y: 342, w: 34, h: 28, minX: 1980, maxX: 2330, speed: 165, direction: 1, phase: 1 }
+            ],
+            goal: { x: 2735, y: 285, w: 54, h: 95 }
+        };
 
         // Homework Dataset
         const homeworkData = {
@@ -557,6 +636,11 @@
                 capturingKeybind = null;
                 return;
             }
+            const target = e.target;
+            const isTextEntry = target instanceof HTMLElement
+                && (target.isContentEditable || target.matches('input, textarea, select'));
+            const adminModalOpen = !document.getElementById('adminModal').classList.contains('hidden');
+            if (isTextEntry || adminModalOpen) return;
             if ((gameState === 'PLAYING' || gameState === 'PAUSED') && Object.values(keybinds).includes(e.code)) e.preventDefault();
             keys[e.code] = true;
             if (!e.repeat && e.code === keybinds.pause && (gameState === 'PLAYING' || gameState === 'PAUSED') && !isLevelMapOpen) togglePause();
@@ -586,8 +670,9 @@
             if (!e.repeat && e.code === keybinds.dash && gameState === 'PLAYING') {
                 dashPlayer();
             }
-            if (e.code === keybinds.groundPound && gameState === 'PLAYING' && !player.grounded) {
+            if (!e.repeat && e.code === keybinds.groundPound && gameState === 'PLAYING' && !player.grounded) {
                 player.groundPounding = true;
+                player.isSliding = false;
                 player.vy = 850;
                 player.vx = 0;
                 spawnBurst(player.x + player.w / 2, player.y + player.h / 2, '#ef4444', 8);
@@ -597,6 +682,7 @@
 
         window.addEventListener('keyup', (e) => {
             keys[e.code] = false;
+            if (e.code === keybinds.groundPound) player.slideUsedUntilRelease = false;
             if (e.code === keybinds.slack) {
                 setSlacking(false);
             }
@@ -657,7 +743,7 @@
             pass: 'Use hall pass',
             sprint: 'Sprint',
             dash: 'Dash',
-            groundPound: 'Ground pound',
+            groundPound: 'Slide / ground pound',
             pause: 'Pause / resume',
             sound: 'Toggle sound',
             helper: 'Use helper',
@@ -685,24 +771,25 @@
             document.getElementById('settingsControlsTab').setAttribute('aria-selected', String(controlsSelected));
         }
 
-        function mobileKeyDown(code) {
-            keys[code] = true;
-            keys[code === 'ArrowLeft' ? keybinds.left : keybinds.right] = true;
-        }
-
-        function mobileKeyUp(code) {
-            keys[code] = false;
-            keys[code === 'ArrowLeft' ? keybinds.left : keybinds.right] = false;
-        }
-
-        function mobileAction(action) {
+        function mobileAction(action, pressed = true) {
+            if (!pressed) {
+                if (action === 'slack') {
+                    setSlacking(false);
+                    isSlacking = false;
+                }
+                if (action === 'sprint') setSprinting(false);
+                return;
+            }
             if (gameState !== 'PLAYING') return;
             if (action === 'jump') jumpPlayer();
             if (action === 'interact') interactObject();
-            if (action === 'slack') setSlacking(!isSlacking);
+            if (action === 'slack') setSlacking(true);
             if (action === 'sprint') setSprinting(true);
-            if (action === 'sprintStop') setSprinting(false);
             if (action === 'dash') dashPlayer();
+            if (action === 'food') useFood();
+            if (action === 'helper') useHelper();
+            if (action === 'map') toggleLevelMap();
+            if (action === 'pause') togglePause();
         }
 
         function updateJoystick(event) {
@@ -711,30 +798,53 @@
             const bounds = joystick.getBoundingClientRect();
             const centerX = bounds.left + bounds.width / 2;
             const centerY = bounds.top + bounds.height / 2;
-            const maxDistance = bounds.width * 0.36;
+            const maxDistance = bounds.width * 0.34;
             const deltaX = event.clientX - centerX;
             const deltaY = event.clientY - centerY;
             const distance = Math.hypot(deltaX, deltaY);
-            const deadZone = maxDistance * 0.16;
+            const deadZone = 0.12;
             const scale = distance > maxDistance ? maxDistance / distance : 1;
             const knobX = deltaX * scale;
             const knobY = deltaY * scale;
-            const horizontalInput = Math.abs(deltaX) > deadZone ? deltaX / maxDistance : 0;
-
+            const rawAxis = Math.max(-1, Math.min(1, deltaX / maxDistance));
+            mobileMoveAxis = Math.abs(rawAxis) > deadZone
+                ? Math.sign(rawAxis) * (Math.abs(rawAxis) - deadZone) / (1 - deadZone)
+                : 0;
             knob.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`;
-            keys[keybinds.left] = horizontalInput < 0;
-            keys[keybinds.right] = horizontalInput > 0;
+            joystick.dataset.direction = mobileMoveAxis < 0 ? 'left' : (mobileMoveAxis > 0 ? 'right' : 'neutral');
         }
 
         function resetJoystick() {
             document.getElementById('joystickKnob').style.transform = 'translate(-50%, -50%)';
-            keys[keybinds.left] = false;
-            keys[keybinds.right] = false;
+            document.getElementById('joystick').dataset.direction = 'neutral';
+            mobileMoveAxis = 0;
+        }
+
+        function releaseMobileAction(pointerId, button) {
+            const action = mobileActionPointers.get(pointerId);
+            if (!action) return;
+            mobileAction(action, false);
+            mobileActionPointers.delete(pointerId);
+            button.classList.remove('is-pressed');
+        }
+
+        function clearMobileInputs() {
+            mobileActionPointers.forEach(action => mobileAction(action, false));
+            mobileActionPointers.clear();
+            document.querySelectorAll('.mobile-action.is-pressed').forEach(button => button.classList.remove('is-pressed'));
+            const joystick = document.getElementById('joystick');
+            if (joystickPointerId !== null && joystick.hasPointerCapture(joystickPointerId)) {
+                joystick.releasePointerCapture(joystickPointerId);
+            }
+            joystickPointerId = null;
+            resetJoystick();
         }
 
         function setupJoystick() {
             const joystick = document.getElementById('joystick');
             joystick.addEventListener('pointerdown', event => {
+                if (event.pointerType === 'mouse' && event.button !== 0) return;
+                event.preventDefault();
                 if (joystickPointerId !== null) return;
                 joystickPointerId = event.pointerId;
                 try {
@@ -758,6 +868,60 @@
             joystick.addEventListener('lostpointercapture', () => {
                 joystickPointerId = null;
                 resetJoystick();
+            });
+            document.querySelectorAll('.mobile-action').forEach(button => {
+                const action = button.dataset.mobileAction;
+                button.addEventListener('pointerdown', event => {
+                    if (event.pointerType === 'mouse' && event.button !== 0) return;
+                    event.preventDefault();
+                    if (mobileActionPointers.has(event.pointerId)) return;
+                    try {
+                        button.setPointerCapture(event.pointerId);
+                    } catch (error) {
+                        return;
+                    }
+                    mobileActionPointers.set(event.pointerId, action);
+                    button.classList.add('is-pressed');
+                    mobileAction(action);
+                });
+                button.addEventListener('click', event => {
+                    if (event.detail !== 0 || gameState !== 'PLAYING') return;
+                    if (action === 'slack') {
+                        isSlacking = !isSlacking;
+                        setSlacking(isSlacking);
+                    } else if (action === 'sprint') {
+                        setSprinting(!player.sprinting);
+                    } else {
+                        mobileAction(action);
+                    }
+                });
+                ['pointerup', 'pointercancel', 'lostpointercapture'].forEach(eventName => {
+                    button.addEventListener(eventName, event => releaseMobileAction(event.pointerId, button));
+                });
+            });
+            window.addEventListener('blur', clearMobileInputs);
+            window.addEventListener('blur', () => {
+                keys = {};
+                if (player.isSliding) {
+                    player.y += player.h - 40;
+                    player.h = 40;
+                    player.isSliding = false;
+                    player.slideTimer = 0;
+                    player.slideUsedUntilRelease = false;
+                }
+            });
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    clearMobileInputs();
+                    keys = {};
+                    if (player.isSliding) {
+                        player.y += player.h - 40;
+                        player.h = 40;
+                        player.isSliding = false;
+                        player.slideTimer = 0;
+                        player.slideUsedUntilRelease = false;
+                    }
+                }
             });
         }
 
@@ -898,6 +1062,7 @@
             if (shouldOpen) {
                 questLogWasPaused = isPaused;
                 if (gameState === 'PLAYING' || gameState === 'PAUSED') isPaused = true;
+                clearMobileInputs();
                 keys = {};
                 setSlacking(false);
                 isSlacking = false;
@@ -1042,27 +1207,32 @@
             });
         }
 
-        function setupSkylineArena() {
+        function setupSkylineArena(targetLevel = 1, preserveScore = false) {
             const room = rooms.MultiplayerArena;
-            room.platforms.forEach(platform => {
-                platform.crumbling = false;
-                platform.crumbleTimer = 0;
-                platform.brokenUntil = 0;
-            });
-            room.pickups.forEach(pickup => {
-                pickup.active = true;
-                pickup.respawn = 0;
-            });
-            room.crystals.forEach(crystal => { crystal.collected = false; });
-            room.hazards.forEach(hazard => {
-                hazard.startX ??= hazard.x;
-                hazard.startDirection ??= hazard.direction;
-                hazard.x = hazard.startX;
-                hazard.direction = hazard.startDirection;
-            });
+            skylineLevel = targetLevel === 2 ? 2 : 1;
+            const layout = skylineLevel === 2 ? skylineArenaLevelTwo : skylineArenaLevelOne;
+            room.title = layout.title;
+            room.color = layout.color;
+            room.width = layout.width;
+            room.platforms = layout.platforms.map(platform => ({
+                ...platform, crumbling: false, crumbleTimer: 0, brokenUntil: 0
+            }));
+            room.pickups = layout.pickups.map(pickup => ({ ...pickup, active: true, respawn: 0 }));
+            room.crystals = layout.crystals.map(crystal => ({ ...crystal, collected: false }));
+            room.hazards = layout.hazards.map(hazard => ({
+                ...hazard, startX: hazard.x, startDirection: hazard.direction, stunned: 0
+            }));
+            room.goal = { ...layout.goal };
             skylinePowerups = { turbo: 0, highJump: 0, shield: 0 };
             skylineCrystals = 0;
-            skylineScore = 0;
+            if (skylineLevel === 1) {
+                skylineLevelStartScore = 0;
+                skylineScore = 0;
+            } else if (preserveScore) {
+                skylineLevelStartScore = skylineScore;
+            } else {
+                skylineScore = skylineLevelStartScore;
+            }
             skylineHudText = '';
             resetLevelObjectives([]);
             resetTroubleMeter();
@@ -1093,10 +1263,18 @@
 
         function startGame() {
             if (gameState === 'MENU') setupSelectedLevel();
+            if (player.h !== 40) player.y += player.h - 40;
+            player.h = 40;
+            player.isSliding = false;
+            player.slideTimer = 0;
+            player.slideUsedUntilRelease = false;
+            player.slideParticleTimer = 0;
+            player.groundPounding = false;
             document.getElementById('startOverlay').classList.add('hidden');
             document.getElementById('gameOverOverlay').classList.add('hidden');
             document.getElementById('pauseOverlay').classList.add('hidden');
-            document.getElementById('pauseBtn').innerHTML = `<span aria-hidden="true">⏸</span> Pause (${keyLabel(keybinds.pause)})`;
+            const pauseButton = document.getElementById('pauseBtn');
+            if (pauseButton) pauseButton.innerHTML = `<span aria-hidden="true">⏸</span> Pause (${keyLabel(keybinds.pause)})`;
             gameState = 'PLAYING';
             isPaused = false;
             lastTimestamp = 0;
@@ -1353,7 +1531,7 @@
             if (skylinePowerups.turbo > 0) active.push(`TURBO ${Math.ceil(skylinePowerups.turbo)}s`);
             if (skylinePowerups.highJump > 0) active.push(`HOP ${Math.ceil(skylinePowerups.highJump)}s`);
             if (skylinePowerups.shield > 0) active.push(`SHIELD ${Math.ceil(skylinePowerups.shield)}s`);
-            const nextText = `PRISMS ${skylineCrystals}/4 | SCORE ${skylineScore}${active.length ? ` | ${active.join(' ')}` : ''}`;
+            const nextText = `LEVEL ${skylineLevel} | PRISMS ${skylineCrystals}/4 | SCORE ${skylineScore}${active.length ? ` | ${active.join(' ')}` : ''}`;
             if (!force && nextText === skylineHudText) return;
             skylineHudText = nextText;
             status.innerText = skylineHudText;
@@ -1457,6 +1635,7 @@
 
             const mapModal = document.getElementById('levelMapModal');
             isLevelMapOpen = shouldOpen;
+            clearMobileInputs();
             if (shouldOpen) {
                 levelMapWasPaused = isPaused;
                 isPaused = true;
@@ -1482,7 +1661,7 @@
                 return ['WestbridgeHub', 'WestbridgeShop', 'WestbridgeLab', 'SecondFloor', 'HistoryClass', 'ChemistryClass', 'MusicClass', 'Level2Exit'];
             }
             const hubKey = `Level${level}Hub`;
-            return [hubKey, ...Array.from({ length: 6 }, (_, index) => `${hubKey}Class${index + 1}`), 'FinalExit'];
+            return [hubKey, `${hubKey}Special`, ...Array.from({ length: 6 }, (_, index) => `${hubKey}Class${index + 1}`), 'FinalExit'];
         }
 
         function getLevelMapPositions() {
@@ -1501,7 +1680,7 @@
                 };
             }
             const hubKey = `Level${level}Hub`;
-            const positions = { [hubKey]: [105, 265], FinalExit: [905, 265] };
+            const positions = { [hubKey]: [105, 265], [`${hubKey}Special`]: [500, 265], FinalExit: [905, 265] };
             for (let index = 0; index < 6; index++) {
                 positions[`${hubKey}Class${index + 1}`] = [390 + (index % 3) * 220, index < 3 ? 110 : 420];
             }
@@ -1698,7 +1877,7 @@
                 lastFrameTime = 0;
                 particles = [];
                 roomBanner = { text: '', time: 0 };
-                setupSkylineArena();
+                setupSkylineArena(skylineLevel);
                 startGame();
                 return;
             }
@@ -1799,6 +1978,7 @@
                 platform.crumbleTimer = 0;
                 platform.brokenUntil = 0;
             });
+            resetMovementChallenges(room);
         }
 
         function resetLevel2Platforms() {
@@ -1968,10 +2148,72 @@
             }));
         }
 
+        const generatedSpecialRooms = [
+            {
+                title: 'LEVEL 3: BLOOM VAULT',
+                color: '#dcfce7',
+                reward: { coins: 35, food: 1 },
+                prize: { x: 365, y: 215 },
+                platforms: [[120, 300, 145, 'spring'], [330, 235, 145], [535, 300, 145]]
+            },
+            {
+                title: 'LEVEL 4: CHRONO LAB',
+                color: '#cffafe',
+                reward: { coins: 40, hallPasses: 1 },
+                prize: { x: 355, y: 200 },
+                platforms: [[100, 300, 150], [320, 220, 145, 'boost'], [535, 300, 150]]
+            },
+            {
+                title: 'LEVEL 5: HALL OF MASTERPIECES',
+                color: '#fce7f3',
+                reward: { coins: 45, helpers: 2 },
+                prize: { x: 330, y: 200 },
+                platforms: [[100, 295, 135, 'crumble'], [295, 220, 155], [515, 155, 155], [605, 300, 100]]
+            },
+            {
+                title: 'LEVEL 6: SUNKEN TREASURY',
+                color: '#dbeafe',
+                reward: { coins: 50, food: 2 },
+                prize: { x: 500, y: 225 },
+                platforms: [[90, 285, 145], [285, 315, 155, 'spring'], [490, 245, 145], [635, 300, 90]]
+            },
+            {
+                title: 'LEVEL 7: STARWATCH DECK',
+                color: '#ffedd5',
+                reward: { coins: 55, hallPasses: 1, helpers: 1 },
+                prize: { x: 505, y: 160 },
+                platforms: [[100, 310, 145], [305, 245, 135, 'boost'], [500, 180, 150], [625, 290, 105]]
+            },
+            {
+                title: 'LEVEL 8: AFTER-HOURS GALLERY',
+                color: '#ede9fe',
+                reward: { coins: 65, helpers: 3 },
+                prize: { x: 530, y: 170 },
+                platforms: [[100, 300, 155], [320, 245, 145], [525, 190, 145, 'crumble'], [620, 300, 100]]
+            },
+            {
+                title: 'LEVEL 9: STORM CORE',
+                color: '#dbeafe',
+                reward: { coins: 70, food: 2, hallPasses: 1 },
+                prize: { x: 490, y: 150 },
+                platforms: [[95, 300, 135], [290, 235, 135, 'spring'], [485, 170, 135], [625, 295, 105]]
+            },
+            {
+                title: 'LEVEL 10: PRISM CROWN CHAMBER',
+                color: '#f3e8ff',
+                reward: { coins: 100, food: 2, hallPasses: 1, helpers: 3 },
+                prize: { x: 485, y: 190 },
+                platforms: [[90, 320, 135], [285, 270, 135, 'spring'], [475, 210, 135, 'boost'], [625, 300, 105]]
+            }
+        ];
+
         function setupGeneratedLevel(levelNumber) {
             const hubKey = `Level${levelNumber}Hub`;
             const layout = generatedLevelLayouts[levelNumber - 3];
             if (!layout) throw new Error(`No generated level layout configured for level ${levelNumber}.`);
+            const specialRoom = generatedSpecialRooms[levelNumber - 3];
+            if (!specialRoom) throw new Error(`No special room configured for level ${levelNumber}.`);
+            const specialRoomKey = `${hubKey}Special`;
             const subjectPool = ['History', 'Chemistry', 'MusicClass', 'Math', 'Science', 'ELA', 'Art', 'Computer', 'Cafeteria', 'Gym'];
             const classOrder = multiplayerSession
                 ? seededShuffleArray(subjectPool, (networkWorldSeed ^ Math.imul(levelNumber, 0x9e3779b1)) >>> 0)
@@ -2000,6 +2242,17 @@
                 reqLevelSubjects: true,
                 isLevelExit: true,
                 label: `Level ${levelNumber} exit`
+            });
+            const specialDoorX = Math.round(layout.width * 0.48);
+            classDoors.push({
+                x: specialDoorX,
+                y: 280,
+                w: 70,
+                h: 100,
+                targetRoom: specialRoomKey,
+                targetX: 100,
+                targetY: 300,
+                label: specialRoom.title
             });
 
             const doorPlatforms = classDoors.map(door => ({
@@ -2062,6 +2315,29 @@
                         reported: false
                     };
                 })
+            };
+            setMovementChallenges(
+                rooms[hubKey],
+                Math.round(layout.width * 0.34),
+                Math.round(layout.width * 0.72),
+                levelNumber + 1,
+                84 + levelNumber % 4 * 8
+            );
+
+            rooms[specialRoomKey] = {
+                title: specialRoom.title,
+                color: specialRoom.color,
+                levelStyle: layout.style,
+                levelAccent: layout.accent,
+                doors: [{ x: 20, y: 280, w: 55, h: 100, targetRoom: hubKey, targetX: specialDoorX - 90, targetY: 300 }],
+                platforms: [
+                    { x: 0, y: 380, w: 800, h: 70 },
+                    ...specialRoom.platforms.map(([x, y, w, surface]) => ({ x, y, w, h: 20, ...(surface ? { surface } : {}) }))
+                ],
+                desk: null,
+                teacher: null,
+                enemies: [],
+                prize: { ...specialRoom.reward, ...specialRoom.prize, claimed: false }
             };
 
             generatedSubjects.forEach((subject, index) => {
@@ -2194,8 +2470,20 @@
         }
 
         function continueAfterWin() {
+            if (multiplayerSession?.gameId === 'skyline') {
+                continueSkylineLevel();
+                return;
+            }
             if (level < 10) advanceLevel();
             else returnToMenu();
+        }
+
+        function continueSkylineLevel() {
+            if (multiplayerSession?.gameId !== 'skyline' || skylineLevel !== 1) return;
+            document.getElementById('gameOverOverlay').classList.add('hidden');
+            setupSkylineArena(2, true);
+            roomBanner = { text: 'NIGHT SHIFT: COLLECT FOUR PRISMS!', time: 2.5 };
+            startGame();
         }
 
         function returnToMenu() {
@@ -2265,6 +2553,71 @@
                     roomBanner = { text: buddyNearby ? `BUDDY BONUS +${coinReward}!` : (combo > 1 ? `COIN COMBO x${combo}!` : 'COIN GET!'), time: 1.2 };
                     playTone(980, 0.05);
                 }
+            });
+        }
+
+        function smashNearbyPoundTargets(room) {
+            let rewardsCollected = false;
+            (room.poundTargets || []).forEach(target => {
+                if (target.broken ||
+                    Math.abs(player.x + player.w / 2 - target.x) > 145 ||
+                    Math.abs(player.y + player.h - (target.y + target.h / 2)) > 60) return;
+                target.broken = true;
+                coins += target.reward;
+                recordQuestProgress('coinsCollected');
+                spawnBurst(target.x, target.y + target.h / 2, '#fbbf24', 16);
+                roomBanner = { text: `SLAM BLOCK BROKEN! +${target.reward} COINS`, time: 1.6 };
+                rewardsCollected = true;
+            });
+            if (rewardsCollected) updateUI();
+        }
+
+        function updateSlideGateRewards(room) {
+            (room.slideGates || []).forEach(gate => {
+                const overlapsGate = player.x + player.w > gate.x && player.x < gate.x + gate.w;
+                if (player.isSliding && overlapsGate) gate.entered = true;
+                if (!gate.entered || gate.rewarded || overlapsGate) return;
+                gate.rewarded = true;
+                gate.entered = false;
+                coins += 2;
+                recordQuestProgress('coinsCollected');
+                spawnBurst(gate.x + gate.w / 2, gate.y + gate.h, '#38bdf8', 12);
+                roomBanner = { text: 'SLIDE TUNNEL CLEAR! +2 COINS', time: 1.4 };
+                updateUI();
+            });
+        }
+
+        function endPlayerSlide(room) {
+            if (!player.isSliding) return;
+            player.y += player.h - 40;
+            player.h = 40;
+            player.isSliding = false;
+            player.slideTimer = 0;
+
+            const direction = Math.sign(player.vx) || player.dashDirection || 1;
+            (room.slideGates || []).forEach(gate => {
+                const overlapsGate = player.x + player.w > gate.x && player.x < gate.x + gate.w &&
+                    player.y + player.h > gate.y && player.y < gate.y + gate.h;
+                if (!overlapsGate) return;
+                player.x = direction > 0 ? gate.x - player.w : gate.x + gate.w;
+                player.vx = 0;
+                gate.entered = false;
+            });
+        }
+
+        function emitSlideDust() {
+            const direction = Math.sign(player.vx) || player.dashDirection || 1;
+            particles.push({
+                x: direction > 0 ? player.x - 2 : player.x + player.w + 2,
+                y: player.y + player.h - 3,
+                vx: -direction * (24 + Math.random() * 34),
+                vy: -8 - Math.random() * 28,
+                life: 0.24 + Math.random() * 0.16,
+                maxLife: 0.4,
+                size: 2 + Math.random() * 2.5,
+                spin: 0,
+                rotation: 0,
+                color: '#ffffff'
             });
         }
 
@@ -2395,6 +2748,7 @@
                 document.getElementById('statusText').innerText = 'Shop: Enter the Westbridge Supply Shop first.';
                 return;
             }
+            clearMobileInputs();
             gameState = 'SHOP';
             updateShopUI();
             document.getElementById('shopModal').classList.remove('hidden');
@@ -2406,18 +2760,57 @@
         }
 
         function buyShopItem(item) {
-            const costs = { food: 3, pass: 5, random: 4 };
+            const costs = { food: 3, pass: 5, random: 4, energy: 4, stamina: 4, lunch: 8, helperBundle: 9 };
+            if (!Object.prototype.hasOwnProperty.call(costs, item)) {
+                document.getElementById('shopMessage').innerText = 'That item is not available.';
+                return;
+            }
             if (coins < costs[item]) {
                 document.getElementById('shopMessage').innerText = 'Not enough coins yet.';
+                return;
+            }
+            if (item === 'energy' && energy >= maxEnergy) {
+                document.getElementById('shopMessage').innerText = 'Energy is already full. Save your coins for later.';
+                return;
+            }
+            if (item === 'stamina' && sprintStamina >= maxSprintStamina) {
+                document.getElementById('shopMessage').innerText = 'Sprint stamina is already full. Save your coins for later.';
+                return;
+            }
+            if (item === 'lunch' && energy >= maxEnergy && sprintStamina >= maxSprintStamina) {
+                document.getElementById('shopMessage').innerText = 'Both energy and sprint stamina are already full.';
                 return;
             }
             coins -= costs[item];
             if (item === 'food') inventory.food++;
             if (item === 'pass') inventory.hallPasses++;
-            if (item === 'random') {
+            if (item === 'energy') energy = Math.min(maxEnergy, energy + 50);
+            if (item === 'stamina') {
+                sprintStamina = Math.min(maxSprintStamina, sprintStamina + 45);
+                if (sprintStamina === maxSprintStamina) player.sprintLocked = false;
+            }
+            if (item === 'lunch') {
+                energy = maxEnergy;
+                sprintStamina = maxSprintStamina;
+                player.sprintLocked = false;
+            }
+            if (item === 'random' || item === 'helperBundle') {
                 const helper = ['energy', 'stealth', 'dash'][Math.floor(Math.random() * 3)];
-                inventory.helpers.push(helper);
-                document.getElementById('shopMessage').innerText = `Mystery helper stored: ${helper.toUpperCase()} (press ${keyLabel(keybinds.helper)}).`;
+                if (item === 'random') {
+                    inventory.helpers.push(helper);
+                    document.getElementById('shopMessage').innerText = `Mystery helper stored: ${helper.toUpperCase()} (press ${keyLabel(keybinds.helper)}).`;
+                } else {
+                    for (let count = 0; count < 3; count++) {
+                        inventory.helpers.push(['energy', 'stealth', 'dash'][Math.floor(Math.random() * 3)]);
+                    }
+                    document.getElementById('shopMessage').innerText = 'Helper bundle added: 3 mystery helpers stored!';
+                }
+            } else if (item === 'energy') {
+                document.getElementById('shopMessage').innerText = 'Energy Drink used: +50 energy.';
+            } else if (item === 'stamina') {
+                document.getElementById('shopMessage').innerText = 'Sprint Tonic used: +45 sprint stamina.';
+            } else if (item === 'lunch') {
+                document.getElementById('shopMessage').innerText = 'Power Lunch used: energy and sprint stamina refilled!';
             } else {
                 document.getElementById('shopMessage').innerText = 'Purchase added to your inventory.';
             }
@@ -2481,8 +2874,10 @@
         function togglePause() {
             if ((gameState !== 'PLAYING' && gameState !== 'PAUSED') || isLevelMapOpen ||
                 !document.getElementById('questModal').classList.contains('hidden')) return;
+            clearMobileInputs();
             isPaused = !isPaused;
-            document.getElementById('pauseBtn').innerHTML = isPaused
+            const pauseButton = document.getElementById('pauseBtn');
+            if (pauseButton) pauseButton.innerHTML = isPaused
                 ? `<span aria-hidden="true">▶</span> Resume (${keyLabel(keybinds.pause)})`
                 : `<span aria-hidden="true">⏸</span> Pause (${keyLabel(keybinds.pause)})`;
             document.getElementById('pauseOverlay').classList.toggle('hidden', !isPaused);
@@ -2493,7 +2888,8 @@
 
         function toggleSound() {
             soundEnabled = !soundEnabled;
-            document.getElementById('soundBtn').innerText = `Sound: ${soundEnabled ? 'ON' : 'OFF'} (${keyLabel(keybinds.sound)})`;
+            const soundButton = document.getElementById('soundBtn');
+            if (soundButton) soundButton.innerText = `Sound: ${soundEnabled ? 'ON' : 'OFF'} (${keyLabel(keybinds.sound)})`;
             if (soundEnabled) playTone(440, 0.06);
         }
 
@@ -2549,7 +2945,8 @@
 
         function dashPlayer() {
             if (!player.canDash || player.dashCooldown > 0) return;
-            const dir = keys[keybinds.left] ? -1 : (keys[keybinds.right] ? 1 : (player.vx < 0 ? -1 : 1));
+            const dir = mobileMoveAxis < -0.12 || keys[keybinds.left] ? -1
+                : (mobileMoveAxis > 0.12 || keys[keybinds.right] ? 1 : (player.vx < 0 ? -1 : 1));
             player.dashDirection = dir;
             player.dashTime = 0.18;
             player.dashCooldown = 0.75;
@@ -2579,6 +2976,33 @@
                 doorIntent = true;
                 document.getElementById('statusText').innerText = 'Door selected. Entering classroom...';
                 return;
+            }
+            if (currentRoom.prize) {
+                const prize = currentRoom.prize;
+                const prizeDistance = Math.hypot((player.x + player.w / 2) - (prize.x + 20), (player.y + player.h / 2) - prize.y);
+                if (prizeDistance < 95) {
+                    if (prize.claimed) {
+                        document.getElementById('statusText').innerText = 'This level’s treasure has already been claimed.';
+                        return;
+                    }
+                    prize.claimed = true;
+                    coins += prize.coins;
+                    inventory.food += prize.food || 0;
+                    inventory.hallPasses += prize.hallPasses || 0;
+                    for (let count = 0; count < (prize.helpers || 0); count++) {
+                        inventory.helpers.push(['energy', 'stealth', 'dash'][Math.floor(Math.random() * 3)]);
+                    }
+                    const rewardParts = [`${prize.coins} coins`];
+                    if (prize.food) rewardParts.push(`${prize.food} food`);
+                    if (prize.hallPasses) rewardParts.push(`${prize.hallPasses} hall pass`);
+                    if (prize.helpers) rewardParts.push(`${prize.helpers} mystery helpers`);
+                    document.getElementById('statusText').innerText = `TREASURE CLAIMED! ${rewardParts.join(' + ')}!`;
+                    roomBanner = { text: `BONUS ROOM REWARD: +${prize.coins} COINS!`, time: 2.6 };
+                    spawnBurst(prize.x + 20, prize.y - 12, '#ffd43b', 28);
+                    updateUI();
+                    playTone(980, 0.2);
+                    return;
+                }
             }
             // Extra reporter feature: bribe a suspicious reporter with coins to keep them quiet.
             if (currentRoom.reporters) {
@@ -2804,7 +3228,8 @@
 
         function updateUI() {
             registerQuestRoomVisit(currentRoomKey);
-            document.getElementById('roomLabel').innerText = rooms[currentRoomKey].title;
+            const roomLabel = document.getElementById('roomLabel');
+            if (roomLabel) roomLabel.innerText = rooms[currentRoomKey].title;
             let abs = [];
             if (player.canDoubleJump) abs.push('DoubleJump');
             if (player.canStealth) abs.push('Stealth');
@@ -2812,9 +3237,12 @@
             if (player.hasMasterKey) abs.push('MasterKey');
             const sprintLabel = sprintTime > 0 ? ` Pass:${Math.ceil(sprintTime)}s` : ` Stamina:${Math.ceil(sprintStamina)}%${player.sprintLocked ? ' LOCKED' : ''}`;
             const completedClasses = activeLevelSubjects.filter(subject => homeworkDone[subject]).length;
-            document.getElementById('abilityLabel').innerText = multiplayerSession?.gameId === 'skyline'
-                ? `SKYLINE SCRAMBLE | Local score:${skylineScore} | Prisms:${skylineCrystals}/4`
-                : `L${level} | ${difficulty} | Classes:${completedClasses}/${activeLevelSubjects.length} | ${abs.length > 0 ? abs.join(', ') : 'None'} | Coins:${coins} Food:${inventory.food} Pass:${inventory.hallPasses}${sprintLabel}`;
+            const abilityLabel = document.getElementById('abilityLabel');
+            if (abilityLabel) {
+                abilityLabel.innerText = multiplayerSession?.gameId === 'skyline'
+                    ? `SKYLINE SCRAMBLE ${skylineLevel} | Local score:${skylineScore} | Prisms:${skylineCrystals}/4`
+                    : `L${level} | ${difficulty} | Classes:${completedClasses}/${activeLevelSubjects.length} | ${abs.length > 0 ? abs.join(', ') : 'None'} | Coins:${coins} Food:${inventory.food} Pass:${inventory.hallPasses}${sprintLabel}`;
+            }
             updateShopUI();
         }
 
@@ -2847,16 +3275,24 @@
         function triggerWin() {
             gameState = 'WIN';
             if (multiplayerSession?.gameId === 'skyline') {
-                document.getElementById('gameOverTitle').innerText = 'SKYLINE SCRAMBLE CLEAR!';
+                const isFinalSkylineLevel = skylineLevel >= 2;
+                document.getElementById('gameOverTitle').innerText = isFinalSkylineLevel
+                    ? 'SKYLINE SCRAMBLE COMPLETE!'
+                    : 'SKYLINE LEVEL 1 CLEAR!';
                 document.getElementById('gameOverTitle').className = 'text-4xl sm:text-5xl font-black text-green-400 drop-shadow-[4px_4px_0px_#000] mb-4';
-                document.getElementById('gameOverReason').innerText = `You banked ${skylineCrystals}/4 prisms and scored ${skylineScore} points!`;
-                document.getElementById('nextLevelBtn').classList.add('hidden');
+                document.getElementById('gameOverReason').innerText = isFinalSkylineLevel
+                    ? `You cleared both skyline courses and scored ${skylineScore} points!`
+                    : `You banked ${skylineCrystals}/4 prisms and scored ${skylineScore} points. Ready for the night course?`;
+                const nextLevelButton = document.getElementById('nextLevelBtn');
+                nextLevelButton.classList.toggle('hidden', isFinalSkylineLevel);
+                nextLevelButton.innerText = '▶ SKYLINE LEVEL 2';
                 document.getElementById('retryLevelBtn').classList.remove('hidden');
                 showSlackRating();
                 document.getElementById('gameOverOverlay').classList.remove('hidden');
                 playTone(880, 0.2);
                 return;
             }
+            document.getElementById('nextLevelBtn').innerText = '▶ NEXT LEVEL';
             registerLevelCompletion();
             document.getElementById('gameOverTitle').innerText = level === 10 ? "🎉 LEVEL 10 CLEAR! YOU ESCAPED!" : `🎉 LEVEL ${level} CLEAR!`;
             document.getElementById('gameOverTitle').className = "text-5xl font-black text-green-400 drop-shadow-[4px_4px_0px_#000] mb-4";
@@ -3032,6 +3468,99 @@
             }
         }
 
+        function clampAppWindowToViewport() {
+            const appWindow = document.getElementById('appWindow');
+            if (appWindow.style.position !== 'fixed') return;
+
+            const rect = appWindow.getBoundingClientRect();
+            const maxLeft = Math.max(0, window.innerWidth - rect.width);
+            const maxTop = Math.max(0, window.innerHeight - rect.height);
+            appWindow.style.left = `${Math.min(Math.max(0, rect.left), maxLeft)}px`;
+            appWindow.style.top = `${Math.min(Math.max(0, rect.top), maxTop)}px`;
+        }
+
+        function setupWindowControls() {
+            const appWindow = document.getElementById('appWindow');
+            const titleBar = document.getElementById('windowTitleBar');
+            let dragPointerId = null;
+            let pointerStartX = 0;
+            let pointerStartY = 0;
+            let windowStartX = 0;
+            let windowStartY = 0;
+
+            titleBar.addEventListener('pointerdown', event => {
+                if (!event.isPrimary || event.button !== 0 || event.target.closest('button')) return;
+                if (document.fullscreenElement === appWindow) return;
+
+                const rect = appWindow.getBoundingClientRect();
+                appWindow.classList.add('window-dragged');
+                appWindow.style.position = 'fixed';
+                appWindow.style.left = `${rect.left}px`;
+                appWindow.style.top = `${rect.top}px`;
+                appWindow.style.width = `${Math.min(rect.width, window.innerWidth)}px`;
+                appWindow.style.maxWidth = 'none';
+                appWindow.style.margin = '0';
+                appWindow.style.transform = 'none';
+                appWindow.style.zIndex = '45';
+
+                const boundedRect = appWindow.getBoundingClientRect();
+                pointerStartX = event.clientX;
+                pointerStartY = event.clientY;
+                windowStartX = boundedRect.left;
+                windowStartY = boundedRect.top;
+                dragPointerId = event.pointerId;
+                event.preventDefault();
+            });
+
+            window.addEventListener('pointermove', event => {
+                if (event.pointerId !== dragPointerId) return;
+                const rect = appWindow.getBoundingClientRect();
+                const maxLeft = Math.max(0, window.innerWidth - rect.width);
+                const maxTop = Math.max(0, window.innerHeight - rect.height);
+                appWindow.style.left = `${Math.min(Math.max(0, windowStartX + event.clientX - pointerStartX), maxLeft)}px`;
+                appWindow.style.top = `${Math.min(Math.max(0, windowStartY + event.clientY - pointerStartY), maxTop)}px`;
+            });
+
+            const endDrag = event => {
+                if (event.pointerId === dragPointerId) dragPointerId = null;
+            };
+            window.addEventListener('pointerup', endDrag);
+            window.addEventListener('pointercancel', endDrag);
+            window.addEventListener('blur', () => { dragPointerId = null; });
+            window.addEventListener('resize', clampAppWindowToViewport);
+        }
+
+        function minimizeAppWindow() {
+            document.getElementById('appWindow').classList.add('hidden');
+            document.getElementById('desktopAppIcon').classList.add('hidden');
+            document.getElementById('desktopAppIcon').classList.remove('flex');
+            const launcher = document.getElementById('minimizedLauncher');
+            launcher.classList.remove('hidden');
+            launcher.classList.add('flex');
+        }
+
+        function closeAppWindow() {
+            document.getElementById('appWindow').classList.add('hidden');
+            const launcher = document.getElementById('minimizedLauncher');
+            launcher.classList.add('hidden');
+            launcher.classList.remove('flex');
+            const desktopIcon = document.getElementById('desktopAppIcon');
+            desktopIcon.classList.remove('hidden');
+            desktopIcon.classList.add('flex');
+        }
+
+        function restoreAppWindow() {
+            const appWindow = document.getElementById('appWindow');
+            appWindow.classList.remove('hidden');
+            const launcher = document.getElementById('minimizedLauncher');
+            launcher.classList.add('hidden');
+            launcher.classList.remove('flex');
+            const desktopIcon = document.getElementById('desktopAppIcon');
+            desktopIcon.classList.add('hidden');
+            desktopIcon.classList.remove('flex');
+            clampAppWindowToViewport();
+        }
+
         function showControls() {
             if (gameState === 'MENU') {
                 document.getElementById('optionsPanel').classList.remove('hidden');
@@ -3045,7 +3574,7 @@
         }
 
         function showHelp() {
-            alert('Objective:\nComplete Math, ELA, Science, and Gym to unlock the Principal Office.\nBonus subjects unlock no ability, but help you explore the school.');
+            alert('Objective:\nComplete Math, ELA, Science, and Gym to unlock the Principal Office.\nHold S while grounded for a slide burst (maximum 1.5 seconds); press S in the air to ground pound cracked blocks.\nBonus subjects unlock no ability, but help you explore the school.');
         }
 
         function gameLoop(timestamp) {
@@ -3156,6 +3685,10 @@
             if (player.jumpBufferTimer > 0) player.jumpBufferTimer -= dt;
             if (player.coyoteTimer > 0) player.coyoteTimer -= dt;
 
+            const slidePoseTarget = player.isSliding ? 1 : 0;
+            player.slidePoseVelocity += (slidePoseTarget - player.slidePose) * 180 * dt;
+            player.slidePoseVelocity *= Math.exp(-24 * dt);
+            player.slidePose = Math.max(-0.08, Math.min(1.08, player.slidePose + player.slidePoseVelocity * dt));
             player.landBounce = Math.max(0, player.landBounce - dt);
             // Update Moving Platforms
             (room.platforms || []).forEach(p => {
@@ -3181,7 +3714,12 @@
 
             // Player movement controls
             const moveSpeed = player.sprintBoost && sprintTime > 0 ? 430 : (sprintTime > 0 ? 360 : 220);
-            const movingInput = Boolean(keys[keybinds.left] || keys[keybinds.right]);
+            const movementAxis = Math.max(-1, Math.min(1,
+                (keys[keybinds.right] ? 1 : 0) - (keys[keybinds.left] ? 1 : 0) + mobileMoveAxis
+            ));
+            const moveLeft = movementAxis < -0.12;
+            const moveRight = movementAxis > 0.12;
+            const movingInput = moveLeft || moveRight;
             if (movingInput && (player.sprinting || sprintTime > 0)) {
                 sprintQuestTimer += dt;
                 if (sprintQuestTimer >= 1) {
@@ -3192,6 +3730,21 @@
             const onFloor = room.platforms.some(platform =>
                 platform.y === 380 && player.y >= platform.y - player.h - 40 && player.y <= platform.y - player.h + 10
             );
+            const slideKeyHeld = Boolean(keys[keybinds.groundPound]);
+            if (player.isSliding) {
+                player.slideTimer = Math.max(0, player.slideTimer - dt);
+                if (!player.grounded || !slideKeyHeld || player.slideTimer <= 0) {
+                    endPlayerSlide(room);
+                }
+            } else if (!player.groundPounding && player.grounded && slideKeyHeld && !player.slideUsedUntilRelease) {
+                player.y += player.h - 24;
+                player.h = 24;
+                player.isSliding = true;
+                player.slideTimer = 1.5;
+                player.slideUsedUntilRelease = true;
+                player.slideParticleTimer = 0;
+                spawnBurst(player.x + player.w / 2, player.y + player.h, '#ffffff', 5);
+            }
 
             if (player.sprinting && sprintTime <= 0 && movingInput) {
                 sprintStamina = Math.max(0, sprintStamina - 28 * getQuestBuffs().sprintDrain * dt);
@@ -3211,15 +3764,14 @@
             }
 
             const turboMultiplier = multiplayerSession?.gameId === 'skyline' && skylinePowerups.turbo > 0 ? 1.5 : 1;
-            const normalSpeed = (player.sprinting && sprintStamina > 0 ? 300 : moveSpeed) *
+            const normalSpeed = (player.isSliding ? 360 : (player.sprinting && sprintStamina > 0 ? 300 : moveSpeed)) *
                 (buddyNearby ? 1.2 : 1) * turboMultiplier * getQuestBuffs().moveSpeed;
             
             if (player.dashTime > 0) {
                 player.dashTime = Math.max(0, player.dashTime - dt);
                 player.vx = player.dashDirection * 1250;
                 spawnBurst(player.x + (player.vx > 0 ? 0 : player.w), player.y + player.h / 2, '#7dd3fc', 3);
-            } else if (keys[keybinds.left]) player.vx = -normalSpeed;
-            else if (keys[keybinds.right]) player.vx = normalSpeed;
+            } else if (moveLeft || moveRight) player.vx = normalSpeed * movementAxis;
             else player.vx *= 0.7;
 
             // Cooldowns
@@ -3228,8 +3780,8 @@
 
             // Wall Slide Logic
             const roomBoundsWidth = room.width || canvas.width;
-            const touchingLeftWall = (player.x <= 2 || room.platforms.some(p => Math.abs(player.x - (p.x + p.w)) < 4 && player.y + player.h > p.y && player.y < p.y + p.h)) && keys[keybinds.left];
-            const touchingRightWall = (player.x + player.w >= roomBoundsWidth - 2 || room.platforms.some(p => Math.abs((player.x + player.w) - p.x) < 4 && player.y + player.h > p.y && player.y < p.y + p.h)) && keys[keybinds.right];
+            const touchingLeftWall = (player.x <= 2 || room.platforms.some(p => Math.abs(player.x - (p.x + p.w)) < 4 && player.y + player.h > p.y && player.y < p.y + p.h)) && moveLeft;
+            const touchingRightWall = (player.x + player.w >= roomBoundsWidth - 2 || room.platforms.some(p => Math.abs((player.x + player.w) - p.x) < 4 && player.y + player.h > p.y && player.y < p.y + p.h)) && moveRight;
             
             player.isWallSliding = !player.grounded && player.vy > 0 && !player.groundPounding && (touchingLeftWall || touchingRightWall);
             if (player.isWallSliding) {
@@ -3246,11 +3798,31 @@
             }
 
             // Apply position
+            const wasGrounded = player.grounded;
+            const previousX = player.x;
             player.x += player.vx * dt;
             player.y += player.vy * dt;
+            if (player.isSliding && Math.abs(player.vx) > 35) {
+                player.slideParticleTimer += dt;
+                while (player.slideParticleTimer >= 0.045) {
+                    player.slideParticleTimer -= 0.045;
+                    emitSlideDust();
+                }
+            } else {
+                player.slideParticleTimer = 0;
+            }
+            if (wasGrounded && !player.isSliding) {
+                (room.slideGates || []).forEach(gate => {
+                    const overlapsGate = player.x + player.w > gate.x && player.x < gate.x + gate.w &&
+                        player.y + player.h > gate.y && player.y < gate.y + gate.h;
+                    if (overlapsGate) {
+                        player.x = previousX;
+                        player.vx = 0;
+                    }
+                });
+            }
 
             // Room Collisions with Platforms
-            const wasGrounded = player.grounded;
             player.grounded = false;
 
             room.doors.forEach(door => {
@@ -3279,6 +3851,7 @@
                         spawnBurst(player.x + player.w / 2, player.y + player.h, '#ef4444', 20);
                         playTone(200, 0.12);
                         document.getElementById('statusText').innerText = '💥 DESK SLAM SHOCKWAVE!';
+                        smashNearbyPoundTargets(room);
                         // Stun enemies in room
                         if (room.enemies) {
                             room.enemies.forEach(enemy => {
@@ -3307,6 +3880,7 @@
                     }
                 }
             });
+            updateSlideGateRewards(room);
 
             if (wasGrounded && !player.grounded && player.vy >= 0) {
                 player.coyoteTimer = 0.1 + getQuestBuffs().coyoteTime; // Coyote grace period
@@ -3627,6 +4201,7 @@
 
             // Draw Platforms
             room.platforms.forEach(drawGamePlatform);
+            drawMovementChallenges(room);
             drawSecurityCameras(room);
 
             // Draw Doors
@@ -3696,6 +4271,33 @@
                     ctx.strokeStyle = '#000000';
                     ctx.strokeRect(coin.x - 7, coin.y - 12 + bob, 14, 18);
                 });
+            }
+
+            if (room.prize) {
+                const prize = room.prize;
+                const pulse = 0.5 + Math.sin(gameTime * 4) * 0.12;
+                ctx.save();
+                ctx.globalAlpha = prize.claimed ? 0.5 : pulse;
+                ctx.fillStyle = '#facc15';
+                ctx.beginPath();
+                ctx.arc(prize.x + 20, prize.y - 2, 31, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1;
+                ctx.fillStyle = prize.claimed ? '#94a3b8' : '#92400e';
+                ctx.fillRect(prize.x, prize.y - 5, 40, 22);
+                ctx.fillStyle = prize.claimed ? '#cbd5e1' : '#f59e0b';
+                ctx.fillRect(prize.x - 3, prize.y - 12, 46, 10);
+                ctx.strokeStyle = '#111827';
+                ctx.lineWidth = 3;
+                ctx.strokeRect(prize.x, prize.y - 5, 40, 22);
+                ctx.strokeRect(prize.x - 3, prize.y - 12, 46, 10);
+                ctx.fillStyle = prize.claimed ? '#334155' : '#fff7b2';
+                ctx.fillRect(prize.x + 17, prize.y - 3, 6, 13);
+                ctx.font = 'bold 11px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillStyle = '#111827';
+                ctx.fillText(prize.claimed ? 'CLAIMED' : 'PRESS USE', prize.x + 20, prize.y - 20);
+                ctx.restore();
             }
 
             if (currentRoomKey === 'MultiplayerArena') drawSkylineObjects(room);
@@ -3822,16 +4424,76 @@
             ctx.restore();
         }
 
+        function drawMovementChallenges(room) {
+            (room.slideGates || []).forEach(gate => {
+                ctx.fillStyle = '#475569';
+                ctx.fillRect(gate.x, gate.y, gate.w, gate.h);
+                ctx.fillStyle = '#94a3b8';
+                for (let mark = 8; mark < gate.w - 4; mark += 20) {
+                    ctx.fillRect(gate.x + mark, gate.y + 4, 10, 4);
+                }
+                ctx.fillStyle = '#0f172a';
+                ctx.font = 'bold 10px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('SLIDE', gate.x + gate.w / 2, gate.y - 5);
+            });
+
+            (room.poundTargets || []).forEach(target => {
+                if (target.broken) {
+                    ctx.fillStyle = '#a16207';
+                    ctx.fillRect(target.x - 14, target.y + 17, 12, 6);
+                    ctx.fillRect(target.x + 4, target.y + 19, 13, 5);
+                    return;
+                }
+                ctx.fillStyle = '#b45309';
+                ctx.fillRect(target.x - target.w / 2, target.y, target.w, target.h);
+                ctx.strokeStyle = '#451a03';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(target.x - target.w / 2, target.y, target.w, target.h);
+                ctx.beginPath();
+                ctx.moveTo(target.x, target.y + 3);
+                ctx.lineTo(target.x - 5, target.y + 12);
+                ctx.lineTo(target.x + 3, target.y + 17);
+                ctx.lineTo(target.x - 2, target.y + 24);
+                ctx.stroke();
+                ctx.fillStyle = '#451a03';
+                ctx.font = 'bold 9px monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText('SLAM', target.x, target.y - 4);
+            });
+        }
+
         function drawSkylineBackdrop(room) {
             ctx.save();
-            ctx.fillStyle = '#98d7ed';
+            const nightShift = skylineLevel === 2;
+            ctx.fillStyle = nightShift ? '#24294d' : '#98d7ed';
             ctx.fillRect(0, 55, room.width, 270);
+            if (nightShift) {
+                ctx.fillStyle = '#fef3c7';
+                ctx.beginPath();
+                ctx.arc(room.width - 150, 110, 34, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#24294d';
+                ctx.beginPath();
+                ctx.arc(room.width - 164, 98, 31, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = 'rgba(226, 232, 255, 0.8)';
+                for (let index = 0; index < 32; index++) {
+                    const x = (index * 173 + 41) % room.width;
+                    const y = 75 + (index * 47) % 180;
+                    ctx.fillRect(x, y, index % 4 === 0 ? 3 : 2, index % 4 === 0 ? 3 : 2);
+                }
+            }
             for (let index = 0; index < room.width / 120; index++) {
                 const buildingX = index * 120;
                 const buildingHeight = 70 + (index * 47 % 95);
-                ctx.fillStyle = index % 2 ? '#5f91ad' : '#47758f';
+                ctx.fillStyle = nightShift
+                    ? (index % 2 ? '#414679' : '#30375f')
+                    : (index % 2 ? '#5f91ad' : '#47758f');
                 ctx.fillRect(buildingX, 320 - buildingHeight, 94, buildingHeight);
-                ctx.fillStyle = index % 3 ? '#c9f5ff' : '#ffe77a';
+                ctx.fillStyle = nightShift
+                    ? (index % 3 ? '#a5f3fc' : '#fef08a')
+                    : (index % 3 ? '#c9f5ff' : '#ffe77a');
                 for (let row = 0; row < 3; row++) {
                     for (let column = 0; column < 3; column++) {
                         const windowY = 320 - buildingHeight + 14 + row * 21;
@@ -3839,7 +4501,7 @@
                     }
                 }
             }
-            ctx.fillStyle = '#f7c85b';
+            ctx.fillStyle = nightShift ? '#fb7185' : '#f7c85b';
             ctx.fillRect(0, 320, room.width, 5);
             ctx.restore();
         }
@@ -3920,7 +4582,7 @@
             ctx.fillStyle = '#102435';
             ctx.font = 'bold 12px monospace';
             ctx.textAlign = 'center';
-            ctx.fillText(unlocked ? 'FINISH' : 'LOCKED', goal.x + goal.w / 2, goal.y + goal.h + 18);
+            ctx.fillText(unlocked ? (skylineLevel === 1 ? 'LEVEL 2' : 'FINISH') : 'LOCKED', goal.x + goal.w / 2, goal.y + goal.h + 18);
             ctx.restore();
         }
 
@@ -4642,16 +5304,21 @@
             const isSprinting = player.sprinting || player.sprintBoost || sprintTime > 0;
             const walkCycle = gameTime * (isSprinting ? 18 : 12);
             const stride = isMoving ? Math.sin(walkCycle) * (isSprinting ? 14 : 10) : 0;
+            const slidePhase = gameTime * 8;
+            const slidePose = player.slidePose;
+            const slideWobble = player.isSliding ? Math.sin(slidePhase) * 0.018 : 0;
             const idleBounce = Math.sin(gameTime * 3.5) * 1.4;
             const landingSquash = player.landBounce > 0
                 ? Math.sin((1 - player.landBounce / 0.22) * Math.PI) * 0.16
                 : 0;
             const isAirborne = !player.grounded;
             const jumpStretch = isAirborne ? Math.max(-0.08, Math.min(0.12, -player.vy / 5200)) : 0;
-            const bob = isMoving ? Math.abs(Math.sin(walkCycle)) * (isSprinting ? 3 : 2) : (isAirborne ? 0 : idleBounce);
+            const bob = player.isSliding ? Math.sin(slidePhase) * 0.8
+                : (isMoving ? Math.abs(Math.sin(walkCycle)) * (isSprinting ? 3 : 2) : (isAirborne ? 0 : idleBounce));
             const baseY = player.y + player.h;
             const py = player.y + 15 + bob;
             const travelDirection = Math.sign(player.vx) || player.dashDirection || 1;
+            const slideDirection = travelDirection;
             const airbornePose = isAirborne ? Math.max(-1, Math.min(1, -player.vy / 420)) : 0;
             const armSwing = isMoving ? Math.sin(walkCycle + Math.PI) * (isSprinting ? 13 : 9) : 0;
             const armLift = isAirborne ? -airbornePose * 7 : (player.groundPounding ? 8 : 0);
@@ -4680,17 +5347,22 @@
             }
 
             ctx.translate(px, baseY);
-            ctx.scale(1 + landingSquash, 1 - landingSquash + jumpStretch);
+            ctx.scale(
+                1 + landingSquash + slidePose * 0.07 + slideWobble,
+                1 - landingSquash + jumpStretch - slidePose * 0.08 - slideWobble * 0.7
+            );
             ctx.translate(-px, -baseY);
 
             const headTilt = isSlacking ? -0.08 : (isAirborne ? -airbornePose * 0.12 : (isSprinting ? travelDirection * 0.05 : 0));
             const headBob = isAirborne ? -airbornePose * 1.5 : 0;
+            const headX = px - slideDirection * 8 * slidePose;
+            const headY = py + headBob + (baseY - 21 - py) * slidePose;
             ctx.save();
-            ctx.translate(px, py + headBob);
-            ctx.rotate(headTilt);
+            ctx.translate(headX, headY);
+            ctx.rotate(headTilt - slideDirection * 0.12 * slidePose);
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
-            ctx.arc(0, 0, 12, 0, Math.PI * 2);
+            ctx.arc(0, 0, 12 - slidePose * 1.5, 0, Math.PI * 2);
             ctx.fill();
             ctx.stroke();
             ctx.font = '14px sans-serif';
@@ -4702,20 +5374,33 @@
 
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.moveTo(px, py + 12);
-            ctx.lineTo(px, py + 30);
-
+            const lerp = (normal, sliding) => normal + (sliding - normal) * slidePose;
+            const neckX = lerp(px, px - slideDirection * 2);
+            const neckY = lerp(py + 12, baseY - 12);
+            const waistX = lerp(px, px + slideDirection * 8);
+            const waistY = lerp(py + 30, baseY - 12);
             const legTuck = isAirborne ? airbornePose * 5 : 0;
-            ctx.moveTo(px, py + 18);
-            ctx.lineTo(px - 10 - stride * 0.45 - armSwing * 0.45, py + 26 + armLift);
-            ctx.moveTo(px, py + 18);
-            ctx.lineTo(px + 10 + stride * 0.45 + armSwing * 0.45, py + 26 + armLift);
-
-            ctx.moveTo(px, py + 30);
-            ctx.lineTo(px - 8 - stride + legTuck, py + 42 - legTuck);
-            ctx.moveTo(px, py + 30);
-            ctx.lineTo(px + 8 + stride + legTuck, py + 42 - legTuck);
+            const shoulderX = lerp(px, px + slideDirection);
+            const shoulderY = lerp(py + 18, baseY - 15);
+            const rearArmX = lerp(px - 10 - stride * 0.45 - armSwing * 0.45, px - slideDirection * 13);
+            const rearArmY = lerp(py + 26 + armLift, baseY - 10);
+            const frontArmX = lerp(px + 10 + stride * 0.45 + armSwing * 0.45, px + slideDirection * 15);
+            const frontArmY = lerp(py + 26 + armLift, baseY - 20);
+            const rearLegX = lerp(px - 8 - stride + legTuck, px - slideDirection * 14);
+            const rearLegY = lerp(py + 42 - legTuck, baseY - 4);
+            const frontLegX = lerp(px + 8 + stride + legTuck, px + slideDirection * 24);
+            const frontLegY = lerp(py + 42 - legTuck, baseY - 3);
+            ctx.beginPath();
+            ctx.moveTo(neckX, neckY);
+            ctx.lineTo(waistX, waistY);
+            ctx.moveTo(shoulderX, shoulderY);
+            ctx.lineTo(rearArmX, rearArmY);
+            ctx.moveTo(shoulderX, shoulderY);
+            ctx.lineTo(frontArmX, frontArmY);
+            ctx.moveTo(waistX, waistY);
+            ctx.lineTo(rearLegX, rearLegY);
+            ctx.moveTo(waistX, waistY);
+            ctx.lineTo(frontLegX, frontLegY);
             ctx.stroke();
 
             if (player.groundPounding || player.isWallSliding) {
@@ -4814,4 +5499,5 @@
         updateKeybindLabels();
         applyOptions();
         setupJoystick();
+        setupWindowControls();
         draw();

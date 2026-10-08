@@ -4,7 +4,7 @@
     <link rel="icon" type="image/x-icon" href="Data/icawn.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NTG | v1.3</title>
+    <title>NTG | v1.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Multiplayer API (PeerJS WebRTC for GitHub Pages P2P + Custom Server Fallback) -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -18,7 +18,7 @@
     <div id="appWindow" class="w-full max-w-4xl bg-[#c0c0c0] paint-border flex flex-col overflow-hidden">
         
         <!-- Window Title Bar -->
-        <div class="bg-[#000080] text-white px-3 py-1 flex justify-between items-center font-bold text-sm sm:text-base border-b-4 border-black">
+        <div id="windowTitleBar" class="bg-[#000080] text-white px-3 py-1 flex justify-between items-center font-bold text-sm sm:text-base border-b-4 border-black cursor-move touch-none">
             <div class="flex items-center gap-2">
                 <span class="inline-block w-4 h-4 bg-yellow-400 border border-black text-center text-xs text-black leading-none">🎨</span>
                 <span>NTG Stable</span>
@@ -26,10 +26,9 @@
             <div class="flex gap-1">
                 <button onclick="toggleEasterEgg()" title="Secret file" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ secret_notes.txt ]</button>
                 <button onclick="toggleAdminPanel()" title="Open admin panel" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ ADMIN ]</button>
-                <button onclick="toggleChangelog()" title="View changelog" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ CHANGELOG ]</button>
                 <button onclick="toggleFullscreen()" title="Toggle fullscreen" class="px-2 bg-[#c0c0c0] text-black border border-black font-mono text-xs hover:bg-yellow-300">[ FULL ]</button>
-                <div class="w-4 h-4 bg-[#c0c0c0] border border-black text-black flex items-center justify-center text-xs">_</div>
-                <div class="w-4 h-4 bg-[#c0c0c0] border border-black text-black flex items-center justify-center text-xs">X</div>
+                <button id="minimizeWindowButton" type="button" onclick="minimizeAppWindow()" aria-label="Minimize window" title="Minimize" class="w-4 h-4 bg-[#c0c0c0] border border-black text-black flex items-center justify-center text-xs leading-none cursor-pointer hover:bg-yellow-300">_</button>
+                <button id="closeWindowButton" type="button" onclick="closeAppWindow()" aria-label="Close window" title="Close" class="w-4 h-4 bg-[#c0c0c0] border border-black text-black flex items-center justify-center text-xs leading-none cursor-pointer hover:bg-red-300">X</button>
             </div>
         </div>
 
@@ -230,7 +229,7 @@
                                         <div class="keybind-row flex justify-between items-center text-xs"><span>Use hall pass</span><button id="bind-pass" onclick="beginKeybindCapture('pass')">H</button></div>
                                     <div class="keybind-row flex justify-between items-center text-xs"><span>Sprint</span><button id="bind-sprint" onclick="beginKeybindCapture('sprint')">Shift</button></div>
                                     <div class="keybind-row flex justify-between items-center text-xs"><span>Dash</span><button id="bind-dash" onclick="beginKeybindCapture('dash')">Q</button></div>
-                                        <div class="keybind-row flex justify-between items-center text-xs"><span>Ground pound</span><button id="bind-groundPound" onclick="beginKeybindCapture('groundPound')">S</button></div>
+                                        <div class="keybind-row flex justify-between items-center text-xs"><span>Hold on ground: Slide / press in air: Ground pound</span><button id="bind-groundPound" onclick="beginKeybindCapture('groundPound')">S</button></div>
                                         <div class="keybind-row flex justify-between items-center text-xs"><span>Pause / resume</span><button id="bind-pause" onclick="beginKeybindCapture('pause')">P</button></div>
                                         <div class="keybind-row flex justify-between items-center text-xs"><span>Toggle sound</span><button id="bind-sound" onclick="beginKeybindCapture('sound')">M</button></div>
                                         <div class="keybind-row flex justify-between items-center text-xs"><span>Use helper</span><button id="bind-helper" onclick="beginKeybindCapture('helper')">J</button></div>
@@ -245,18 +244,24 @@
                 </div>
             </div>
 
-            <div class="mobile-controls md:hidden absolute bottom-3 left-3 right-3 flex justify-between items-end pointer-events-none">
-                <div class="pointer-events-auto">
-                    <div id="joystick" class="joystick" aria-label="Movement joystick">
+            <div id="mobileControls" class="mobile-controls md:hidden absolute bottom-3 left-3 right-3 flex justify-between items-end pointer-events-none" aria-label="Touch game controls">
+                <div class="mobile-joystick-wrap pointer-events-auto">
+                    <div id="joystick" class="joystick" role="img" aria-label="Move left or right: drag the stick" tabindex="0">
+                        <span class="joystick-direction joystick-direction-left" aria-hidden="true">◀</span>
+                        <span class="joystick-direction joystick-direction-right" aria-hidden="true">▶</span>
                         <div id="joystickKnob" class="joystick-knob"></div>
                     </div>
                 </div>
-                <div class="mobile-action-grid pointer-events-auto">
-                    <button onpointerdown="mobileAction('jump')">JUMP</button>
-                    <button onpointerdown="mobileAction('interact')">USE</button>
-                    <button onpointerdown="mobileAction('slack')">SLACK</button>
-                    <button onpointerdown="mobileAction('sprint')" onpointerup="mobileAction('sprintStop')" onpointercancel="mobileAction('sprintStop')">RUN</button>
-                    <button onpointerdown="mobileAction('dash')">DASH</button>
+                <div class="mobile-action-grid pointer-events-auto" aria-label="Actions">
+                    <button type="button" class="mobile-action mobile-action-primary" data-mobile-action="jump" aria-label="Jump">JUMP</button>
+                    <button type="button" class="mobile-action" data-mobile-action="interact" aria-label="Interact or use door">USE</button>
+                    <button type="button" class="mobile-action mobile-action-hold" data-mobile-action="slack" aria-label="Hold to slack off">SLACK</button>
+                    <button type="button" class="mobile-action mobile-action-hold" data-mobile-action="sprint" aria-label="Hold to sprint">RUN</button>
+                    <button type="button" class="mobile-action" data-mobile-action="dash" aria-label="Dash">DASH</button>
+                    <button type="button" class="mobile-action" data-mobile-action="food" aria-label="Use food">FOOD</button>
+                    <button type="button" class="mobile-action" data-mobile-action="helper" aria-label="Use helper">HELP</button>
+                    <button type="button" class="mobile-action" data-mobile-action="map" aria-label="Open level map">MAP</button>
+                    <button type="button" class="mobile-action" data-mobile-action="pause" aria-label="Pause or resume">PAUSE</button>
                 </div>
             </div>
 
@@ -366,8 +371,8 @@
                 </div>
             </div>
 
-            <div id="shopModal" class="hidden absolute inset-0 bg-black/70 flex items-center justify-center p-3">
-                <div class="bg-yellow-50 border-4 border-black p-4 w-full max-w-2xl shadow-[8px_8px_0px_#000]">
+            <div id="shopModal" class="hidden absolute inset-0 z-40 bg-black/70 flex items-center justify-center p-3">
+                <div class="shop-panel bg-yellow-50 border-4 border-black p-4 w-full max-w-2xl shadow-[8px_8px_0px_#000]">
                     <div class="flex justify-between items-center border-b-4 border-black pb-2 mb-3">
                         <h2 class="text-2xl font-black">WESTBRIDGE SHOP</h2>
                         <button onclick="closeShop()" class="paint-button px-3 py-1 bg-red-300 font-black">X</button>
@@ -376,9 +381,13 @@
                     <div class="shop-grid">
                         <button onclick="buyShopItem('food')" class="paint-button p-3 text-left bg-green-300 font-bold">🍎 Food<br><span class="text-xs">+35 energy, press <span id="shopFoodKey">F</span> to eat</span><br>3 coins</button>
                         <button onclick="buyShopItem('pass')" class="paint-button p-3 text-left bg-blue-300 font-bold">🎫 Hall Pass<br><span class="text-xs">60-second sprint, press <span id="shopPassKey">H</span></span><br>5 coins</button>
-                        <button onclick="buyShopItem('random')" class="paint-button p-3 text-left bg-purple-300 font-bold">❔ Mystery Item<br><span class="text-xs">Random Level 2 helper</span><br>4 coins</button>
+                        <button onclick="buyShopItem('random')" class="paint-button p-3 text-left bg-purple-300 font-bold">❔ Mystery Helper<br><span class="text-xs">Stores one random helper; press J to use</span><br>4 coins</button>
+                        <button onclick="buyShopItem('energy')" class="paint-button p-3 text-left bg-cyan-200 font-bold">⚡ Energy Drink<br><span class="text-xs">Instantly restore 50 energy</span><br>4 coins</button>
+                        <button onclick="buyShopItem('stamina')" class="paint-button p-3 text-left bg-orange-200 font-bold">🏃 Sprint Tonic<br><span class="text-xs">Instantly restore 45 sprint stamina</span><br>4 coins</button>
+                        <button onclick="buyShopItem('lunch')" class="paint-button p-3 text-left bg-amber-200 font-bold">🥪 Power Lunch<br><span class="text-xs">Refill energy and sprint stamina</span><br>8 coins</button>
+                        <button onclick="buyShopItem('helperBundle')" class="paint-button p-3 text-left bg-fuchsia-200 font-bold">🎁 Helper Bundle<br><span class="text-xs">Adds 3 random helpers to your bag</span><br>9 coins</button>
                     </div>
-                    <div class="mt-4 border-2 border-black bg-white p-2 font-mono text-sm">Coins: <span id="shopCoins">0</span> | Food: <span id="shopFood">0</span> | Passes: <span id="shopPasses">0</span> | Helpers: <span id="shopHelpers">0</span></div>
+                    <div class="mt-4 border-2 border-black bg-white p-2 font-mono text-xs sm:text-sm">Coins: <span id="shopCoins">0</span> | Food: <span id="shopFood">0</span> | Passes: <span id="shopPasses">0</span> | Helpers: <span id="shopHelpers">0</span></div>
                 </div>
             </div>
 
@@ -498,44 +507,17 @@
 
         </div>
 
-        <!-- Controls Bar -->
-        <div id="desktopControlsBar" class="bg-[#c0c0c0] p-3 border-t-4 border-black flex flex-wrap justify-between items-center gap-2">
-            <div class="flex items-center gap-2 text-xs font-bold">
-                <span>Location: <span id="roomLabel" class="bg-white px-2 py-1 border border-black">Math Class</span></span>
-                <span>Abilities: <span id="abilityLabel" class="bg-yellow-200 px-2 py-1 border border-black">None</span></span>
-            </div>
-
-            <div class="flex gap-2">
-                <button id="slackBtn" onmousedown="setSlacking(true)" onmouseup="setSlacking(false)" onmouseleave="setSlacking(false)"
-                        ontouchstart="setSlacking(true)" ontouchend="setSlacking(false)"
-                        class="paint-button px-4 py-2 font-black bg-red-400 text-black hover:bg-red-300 active:bg-red-500 text-xs sm:text-sm">
-                    🤪 SLACK OFF
-                </button>
-                <button onclick="interactObject()" id="interactBtn" class="paint-button px-3 py-2 font-bold bg-blue-300 text-black text-xs sm:text-sm">
-                    📝 Interact / Work
-                </button>
-                <button onclick="togglePause()" id="pauseBtn" class="paint-button px-3 py-2 font-bold bg-yellow-300 text-black text-xs sm:text-sm">
-                    <span aria-hidden="true">⏸</span> Pause
-                </button>
-                <button onclick="toggleSound()" id="soundBtn" class="paint-button px-3 py-2 font-bold bg-gray-300 text-black text-xs sm:text-sm">
-                    Sound: ON
-                </button>
-                <button onclick="toggleQuestLog()" id="questsBtn" class="paint-button px-3 py-2 font-bold bg-yellow-200 text-black text-xs sm:text-sm">
-                    🏆 QUESTS (T)
-                </button>
-                <button onclick="openShop()" id="shopBtn" class="paint-button px-3 py-2 font-bold bg-purple-300 text-black text-xs sm:text-sm">
-                    Shop
-                </button>
-            </div>
-        </div>
-
-        <!-- Status bar -->
-        <div id="statusBar" class="bg-[#e0e0e0] border-t-2 border-black p-1 text-xs flex justify-between items-center text-gray-700 font-mono">
-            <span>Tool: Player Pencil Stickman</span>
-            <span id="statusText">Status: Exploring School...</span>
-            <span>Canvas: 800x450</span>
-        </div>
+        <span id="statusText" class="sr-only" aria-live="polite">Status: Exploring School...</span>
     </div>
+
+    <button id="minimizedLauncher" type="button" onclick="restoreAppWindow()" class="hidden fixed bottom-4 left-1/2 -translate-x-1/2 items-center gap-2 border-2 border-black bg-[#c0c0c0] px-3 py-2 font-bold shadow-[4px_4px_0_#000] z-50" aria-label="Restore NTG Stable">
+        <span class="inline-flex h-5 w-5 items-center justify-center border border-black bg-yellow-400 text-xs" aria-hidden="true">🎨</span>
+        <span>NTG Stable</span>
+    </button>
+    <button id="desktopAppIcon" type="button" ondblclick="restoreAppWindow()" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();restoreAppWindow();}" class="hidden fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-1 rounded px-4 py-3 text-black hover:bg-blue-200/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-blue-700 z-50" aria-label="Double-click to open NTG Stable">
+        <span class="flex h-14 w-14 items-center justify-center border-2 border-black bg-yellow-400 text-3xl shadow-[3px_3px_0_#000]" aria-hidden="true">🎨</span>
+        <span class="border border-transparent bg-[#000080] px-2 text-sm font-bold text-white">NTG Stable</span>
+    </button>
 
     <script src="Data/javascrypt.js"></script>
 </body>
