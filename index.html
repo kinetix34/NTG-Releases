@@ -4,7 +4,7 @@
     <link rel="icon" type="image/x-icon" href="Data/icawn.png">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NTG | v1.4</title>
+    <title>NTG | v1.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Multiplayer API (PeerJS WebRTC for GitHub Pages P2P + Custom Server Fallback) -->
     <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
@@ -233,7 +233,8 @@
                                         <div class="keybind-row flex justify-between items-center text-xs"><span>Pause / resume</span><button id="bind-pause" onclick="beginKeybindCapture('pause')">P</button></div>
                                         <div class="keybind-row flex justify-between items-center text-xs"><span>Toggle sound</span><button id="bind-sound" onclick="beginKeybindCapture('sound')">M</button></div>
                                         <div class="keybind-row flex justify-between items-center text-xs"><span>Use helper</span><button id="bind-helper" onclick="beginKeybindCapture('helper')">J</button></div>
-                                        <div class="keybind-row flex justify-between items-center text-xs"><span>Level map</span><button id="bind-map" onclick="beginKeybindCapture('map')">Tab</button></div>
+                                        <div class="keybind-row flex justify-between items-center text-xs"><span>Phone</span><button id="bind-phone" onclick="beginKeybindCapture('phone')">Tab</button></div>
+                                        <div class="keybind-row flex justify-between items-center text-xs"><span>Level map</span><button id="bind-map" onclick="beginKeybindCapture('map')">G</button></div>
                                         <div class="keybind-row flex justify-between items-center text-xs"><span>Quest log</span><button id="bind-quests" onclick="beginKeybindCapture('quests')">T</button></div>
                                         <button onclick="resetKeybinds()" class="paint-button w-full mt-2 px-2 py-1 bg-yellow-200 font-black text-xs">RESET KEYBINDS</button>
                                 </div>
@@ -261,6 +262,7 @@
                     <button type="button" class="mobile-action" data-mobile-action="food" aria-label="Use food">FOOD</button>
                     <button type="button" class="mobile-action" data-mobile-action="helper" aria-label="Use helper">HELP</button>
                     <button type="button" class="mobile-action" data-mobile-action="map" aria-label="Open level map">MAP</button>
+                    <button type="button" class="mobile-action" data-mobile-action="phone" aria-label="Open phone">PHONE</button>
                     <button type="button" class="mobile-action" data-mobile-action="pause" aria-label="Pause or resume">PAUSE</button>
                 </div>
             </div>
@@ -283,7 +285,7 @@
                         <button onclick="toggleLevelMap(false)" class="paint-button px-3 py-1 bg-red-300 font-black" aria-label="Close level map">CLOSE</button>
                     </div>
                     <canvas id="levelMapCanvas" width="1000" height="520" class="level-map-canvas w-full bg-blue-50 border-2 border-black" aria-label="Map of rooms and connections"></canvas>
-                    <p class="text-xs font-bold mt-2">Press <span id="levelMapKeyLabel">Tab</span> or close to return to the game.</p>
+                    <p class="text-xs font-bold mt-2">Press <span id="levelMapKeyLabel">G</span> or close to return to the game.</p>
                 </div>
             </div>
 
@@ -300,6 +302,128 @@
                     <div id="questList" class="quest-list" aria-live="polite"></div>
                     <p class="text-xs font-bold mt-3">Press <span id="questKeyLabel">T</span> or close to return.</p>
                 </section>
+            </div>
+
+            <div id="phoneModal" class="phone-modal hidden" role="dialog" aria-modal="true" aria-labelledby="phoneTitle">
+                <section class="phone-shell">
+                    <div class="phone-status-bar">
+                        <span>9:41</span>
+                        <span class="phone-status-indicators">
+                            <span id="phoneSignalBars" class="phone-signal-bars" role="img" aria-label="Signal strength 3 of 5">
+                                <i></i><i></i><i></i><i></i><i></i>
+                            </span>
+                            <span id="phoneBatteryStatus">100%</span>
+                            <span class="phone-battery-icon" aria-hidden="true"><i id="phoneBatteryFill"></i></span>
+                        </span>
+                    </div>
+                    <div class="phone-speaker" aria-hidden="true"><i></i></div>
+                    <header class="phone-header">
+                        <div>
+                            <h2 id="phoneTitle">iPear</h2>
+                        </div>
+                        <div class="phone-header-actions">
+                            <button type="button" onclick="togglePhone(false)" class="phone-close" aria-label="Put phone away">×</button>
+                        </div>
+                    </header>
+                    <div class="phone-detection-meter" role="status" aria-label="Phone detection level">
+                        <div class="phone-detection-heading"><span>PHONE DETECTION</span><span id="phoneDetectionPercent">0%</span></div>
+                        <div class="phone-detection-track"><span id="phoneDetectionFill"></span></div>
+                    </div>
+                    <form id="phoneLockScreen" class="phone-lock-screen hidden" onsubmit="handlePhoneUnlock(event)">
+                        <div id="phoneLockGreeting" class="phone-lock-greeting">
+                            <div class="phone-lock-icon" aria-hidden="true">🔒</div>
+                            <div id="phoneLockClock" class="phone-lock-clock">9:41</div>
+                            <div id="phoneLockDate" class="phone-lock-date"></div>
+                            <h3 id="phoneLockTitle">Enter Passcode</h3>
+                            <p id="phoneLockMessage" class="phone-app-description">Swipe up to unlock.</p>
+                        </div>
+                        <div id="phonePasscodeEntry" class="phone-passcode-entry hidden">
+                            <div id="phonePinConfirmGroup" class="phone-pin-group hidden">
+                                <label for="phonePinConfirm" class="phone-pin-label">Confirm passcode</label>
+                                <input id="phonePinConfirm" class="phone-pin-input" type="password" inputmode="numeric" autocomplete="new-password" minlength="4" maxlength="8" pattern="[0-9]{4,8}" aria-label="Confirm phone passcode" onfocus="setPhonePinInput('phonePinConfirm')">
+                            </div>
+                            <label for="phonePinInput" class="phone-pin-label">Passcode (4-8 digits)</label>
+                            <input id="phonePinInput" class="phone-pin-input" type="password" inputmode="numeric" autocomplete="new-password" minlength="4" maxlength="8" pattern="[0-9]{4,8}" aria-label="Phone passcode" required onfocus="setPhonePinInput('phonePinInput')">
+                            <div class="phone-keypad" aria-label="Passcode keypad">
+                                <button type="button" onclick="addPhonePinDigit('1')">1</button>
+                                <button type="button" onclick="addPhonePinDigit('2')">2</button>
+                                <button type="button" onclick="addPhonePinDigit('3')">3</button>
+                                <button type="button" onclick="addPhonePinDigit('4')">4</button>
+                                <button type="button" onclick="addPhonePinDigit('5')">5</button>
+                                <button type="button" onclick="addPhonePinDigit('6')">6</button>
+                                <button type="button" onclick="addPhonePinDigit('7')">7</button>
+                                <button type="button" onclick="addPhonePinDigit('8')">8</button>
+                                <button type="button" onclick="addPhonePinDigit('9')">9</button>
+                                <button type="button" class="phone-keypad-action" onclick="clearPhonePin()">⌫</button>
+                                <button type="button" onclick="addPhonePinDigit('0')">0</button>
+                                <button type="submit" class="phone-keypad-action" aria-label="Submit passcode">✓</button>
+                            </div>
+                            <p id="phoneLockStatus" class="phone-lock-status" aria-live="polite"></p>
+                        </div>
+                        <button id="phoneSwipeUnlock" class="phone-swipe-unlock" type="button" aria-label="Swipe up to enter passcode" onpointerdown="beginPhoneUnlockSwipe(event)" onpointerup="finishPhoneUnlockSwipe(event)" onpointercancel="cancelPhoneUnlockSwipe(event)" onkeydown="handlePhoneUnlockSwipeKey(event)">
+                            <span class="phone-swipe-chevron" aria-hidden="true">⌃</span>
+                            <span id="phoneSwipeHint">Swipe up to unlock</span>
+                        </button>
+                    </form>
+                    <nav id="phoneHome" class="phone-home-screen hidden">
+                        <button type="button" onclick="openPhoneApp('call')" class="phone-app phone-app-call"><span class="phone-app-icon">☎</span><span>Phone</span></button>
+                        <button type="button" onclick="openPhoneApp('text')" class="phone-app phone-app-text"><span class="phone-app-icon">●</span><span>Messages</span></button>
+                        <button type="button" onclick="openPhoneApp('tiktok')" class="phone-app phone-app-tiktok"><span class="phone-app-icon">♪</span><span>TikTok</span></button>
+                        <button type="button" onclick="openPhoneApp('snap')" class="phone-app phone-app-snap"><span class="phone-app-icon">👻</span><span>Snap</span></button>
+                        <button type="button" onclick="openPhoneApp('instagram')" class="phone-app phone-app-instagram"><span class="phone-app-icon">◎</span><span>Instagram</span></button>
+                        <button type="button" onclick="openPhoneApp('settings')" class="phone-app phone-app-settings"><span class="phone-app-icon">⚙</span><span>Settings</span></button>
+                    </nav>
+                    <div id="phoneAppPanel" class="phone-app-panel hidden">
+                        <button type="button" onclick="openPhoneApp('home')" class="phone-back">‹ <span>Home</span></button>
+                        <section id="phoneCallApp" class="hidden phone-app-page">
+                            <h3>☎ Calls</h3>
+                            <p class="phone-app-description">Call a teammate in your room.</p>
+                            <ul id="phoneContactList" class="phone-contact-list"></ul>
+                            <p id="phoneCallStatus" class="phone-call-status" aria-live="polite">No active call.</p>
+                            <p class="phone-footnote">Voice audio is not available yet.</p>
+                        </section>
+                        <section id="phoneTextApp" class="hidden phone-app-page">
+                            <h3>Messages</h3>
+                            <p id="phoneTextStatus" class="phone-app-description">Join a multiplayer room to text teammates.</p>
+                            <ol id="phoneChatLog" class="phone-chat-log" aria-live="polite"></ol>
+                            <form id="phoneChatForm" class="phone-chat-form" onsubmit="sendPhoneMessage(event)">
+                                <input id="phoneChatInput" type="text" maxlength="240" autocomplete="off" placeholder="iMessage" aria-label="Chat message">
+                                <button id="phoneSendButton" type="submit" aria-label="Send message">↑</button>
+                            </form>
+                        </section>
+                        <section id="phoneSocialApp" class="hidden phone-app-page">
+                            <h3 id="phoneSocialTitle"></h3>
+                            <div class="phone-feed-card"><p id="phoneSocialContent"></p></div>
+                            <p id="phoneSocialStatus" class="phone-app-description" aria-live="polite"></p>
+                            <button id="phoneNextPostButton" type="button" onclick="nextPhonePost()" class="phone-next-post">NEXT POST</button>
+                        </section>
+                        <section id="phoneSettingsApp" class="hidden phone-app-page">
+                            <h3>⚙ Settings</h3>
+                            <p class="phone-app-description">Change the passcode used to unlock your phone.</p>
+                            <form id="phoneSettingsForm" class="phone-settings-form" onsubmit="changePhonePasscode(event)">
+                                <label for="phoneCurrentPin">Current passcode</label>
+                                <input id="phoneCurrentPin" type="password" inputmode="numeric" autocomplete="current-password" minlength="4" maxlength="8" pattern="[0-9]{4,8}" required>
+                                <label for="phoneNewPin">New passcode (4-8 digits)</label>
+                                <input id="phoneNewPin" type="password" inputmode="numeric" autocomplete="new-password" minlength="4" maxlength="8" pattern="[0-9]{4,8}" required>
+                                <label for="phoneNewPinConfirm">Confirm new passcode</label>
+                                <input id="phoneNewPinConfirm" type="password" inputmode="numeric" autocomplete="new-password" minlength="4" maxlength="8" pattern="[0-9]{4,8}" required>
+                                <p id="phoneSettingsStatus" aria-live="polite"></p>
+                                <button class="phone-next-post" type="submit">SAVE PASSCODE</button>
+                            </form>
+                            <div class="phone-wallpaper-settings">
+                                <label for="phoneWallpaperInput">Lock and home wallpaper</label>
+                                <input id="phoneWallpaperInput" type="file" accept="image/png,image/jpeg,image/gif" onchange="setPhoneWallpaper(event)">
+                                <button type="button" class="phone-next-post" onclick="resetPhoneWallpaper()">USE DEFAULT WALLPAPER</button>
+                                <p id="phoneWallpaperStatus" aria-live="polite">PNG, JPEG, or GIF · up to 1.5 MB.</p>
+                            </div>
+                        </section>
+                    </div>
+                    <button type="button" class="phone-home-button" onclick="phoneHomeButtonPressed()" aria-label="Phone home button"></button>
+                </section>
+            </div>
+            <div id="phoneConfiscatedToast" class="phone-confiscated-toast" role="alert" aria-live="assertive">
+                <span class="phone-toast-icon" aria-hidden="true">📵</span>
+                <span><strong>PHONE CONFISCATED</strong><small>Your phone was taken. No calls or texts for the rest of this level.</small></span>
             </div>
 
             <div id="pauseOverlay" class="hidden absolute inset-0 z-30 bg-black/70 flex items-center justify-center p-4 text-center">

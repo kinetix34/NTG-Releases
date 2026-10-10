@@ -12,6 +12,7 @@
             this.events = null;
             this.onRosterCallback = null;
             this.onPlayerCallback = null;
+            this.onChatCallback = null;
             this.onDisconnectCallback = null;
         }
 
@@ -80,6 +81,20 @@
             }).catch(err => console.warn('Server state send error:', err));
         }
 
+        async sendChat(message) {
+            if (!this.session) throw new Error('Chat is unavailable because you are not connected to a room.');
+            const response = await fetch(`${this.serverUrl}/api/chat`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    code: this.session.code,
+                    playerId: this.session.playerId,
+                    message: String(message || '').trim().slice(0, 240)
+                })
+            });
+            return await this._readJson(response, 'Could not send chat message.');
+        }
+
         leaveRoom() {
             if (!this.session) return;
             const url = `${this.serverUrl}/api/leave`;
@@ -107,6 +122,7 @@
 
         onRoster(cb) { this.onRosterCallback = cb; }
         onPlayer(cb) { this.onPlayerCallback = cb; }
+        onChat(cb) { this.onChatCallback = cb; }
         onDisconnect(cb) { this.onDisconnectCallback = cb; }
 
         _connectEvents() {
@@ -121,6 +137,8 @@
                         this.onRosterCallback(update.players);
                     } else if (update.type === 'player' && this.onPlayerCallback) {
                         this.onPlayerCallback(update.player);
+                    } else if (update.type === 'chat' && this.onChatCallback) {
+                        this.onChatCallback(update.message || update);
                     }
                 } catch (e) {}
             };

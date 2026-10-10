@@ -66,6 +66,29 @@
         let isPaused = false;
         let isLevelMapOpen = false;
         let levelMapWasPaused = false;
+        let isPhoneOpen = false;
+        let phoneUnlocked = false;
+        let phoneApp = 'home';
+        let phoneTaken = false;
+        let phoneBattery = 100;
+        const maxPhoneBattery = 100;
+        let phoneBatteryDrainTimer = 8;
+        const phonePinStorageKey = 'ntg-phone-pin';
+        let phonePin = localStorage.getItem(phonePinStorageKey) || '';
+        const phoneWallpaperStorageKey = 'ntg-phone-wallpaper';
+        const storedPhoneWallpaper = localStorage.getItem(phoneWallpaperStorageKey) || '';
+        let phoneWallpaper = /^data:image\/(?:png|jpeg|gif);base64,[A-Za-z0-9+/]+={0,2}$/i.test(storedPhoneWallpaper)
+            ? storedPhoneWallpaper
+            : '';
+        let phoneSignalLevel = Math.floor(Math.random() * 5) + 1;
+        let phoneSignalTimer = 3;
+        let phoneLoadRequestId = 0;
+        let phoneCaughtTime = 0;
+        let phoneUnlockSwipeStartY = null;
+        let phoneActivePinInput = 'phonePinInput';
+        let phoneChatMessages = [];
+        let phoneAnimationTimer = 0;
+        let phoneToastTimer = 0;
         let soundEnabled = true;
         let audioContext = null;
         let checkpoint = { room: 'Math', x: 100, y: 300 };
@@ -125,7 +148,8 @@
             pause: 'KeyP',
             sound: 'KeyM',
             helper: 'KeyJ',
-            map: 'Tab',
+            phone: 'Tab',
+            map: 'KeyG',
             quests: 'KeyT'
         };
         const defaultKeybinds = { ...keybinds };
@@ -640,9 +664,18 @@
             const isTextEntry = target instanceof HTMLElement
                 && (target.isContentEditable || target.matches('input, textarea, select'));
             const adminModalOpen = !document.getElementById('adminModal').classList.contains('hidden');
+            if (isPhoneOpen && (e.code === 'Escape' || e.code === keybinds.phone)) {
+                e.preventDefault();
+                togglePhone(false);
+                return;
+            }
             if (isTextEntry || adminModalOpen) return;
             if ((gameState === 'PLAYING' || gameState === 'PAUSED') && Object.values(keybinds).includes(e.code)) e.preventDefault();
             keys[e.code] = true;
+            if (!e.repeat && e.code === keybinds.phone && (gameState === 'PLAYING' || gameState === 'PAUSED')) {
+                togglePhone();
+                return;
+            }
             if (!e.repeat && e.code === keybinds.pause && (gameState === 'PLAYING' || gameState === 'PAUSED') && !isLevelMapOpen) togglePause();
             if (!e.repeat && e.code === keybinds.sound) toggleSound();
             if (!e.repeat && e.code === keybinds.map && (gameState === 'PLAYING' || gameState === 'PAUSED')) toggleLevelMap();
@@ -748,6 +781,7 @@
             sound: 'Toggle sound',
             helper: 'Use helper',
             map: 'Level map',
+            phone: 'Phone',
             quests: 'Quest log'
         };
 
@@ -789,6 +823,7 @@
             if (action === 'food') useFood();
             if (action === 'helper') useHelper();
             if (action === 'map') toggleLevelMap();
+            if (action === 'phone') togglePhone();
             if (action === 'pause') togglePause();
         }
 
@@ -1058,7 +1093,7 @@
             const modal = document.getElementById('questModal');
             const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : modal.classList.contains('hidden');
             if (shouldOpen === !modal.classList.contains('hidden')) return;
-            if (shouldOpen && isLevelMapOpen) return;
+            if (shouldOpen && (isLevelMapOpen || isPhoneOpen)) return;
             if (shouldOpen) {
                 questLogWasPaused = isPaused;
                 if (gameState === 'PLAYING' || gameState === 'PAUSED') isPaused = true;
@@ -1146,6 +1181,7 @@
         }
 
         function setupSelectedLevel() {
+            resetPhoneForLevel();
             if (multiplayerSession?.gameId === 'skyline') {
                 setupSkylineArena();
                 return;
@@ -1484,6 +1520,9 @@
 
         function connectToMultiplayerRoom(data, name, role) {
             multiplayerSession = { role, code: data.code, playerId: data.playerId, name, gameId: data.gameId || 'school', gameName: data.gameName || 'School Co-op' };
+            phoneChatMessages = [];
+            renderPhoneChat();
+            window.NTGMultiplayerAPI.onChat(receivePhoneMessage);
             networkWorldSeed = Number(data.worldSeed) || 0;
             selectedLevel = Number(data.level) || selectedLevel;
             difficulty = data.difficulty || difficulty;
@@ -1631,7 +1670,7 @@
             const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !isLevelMapOpen;
             if (shouldOpen === isLevelMapOpen) return;
             if (shouldOpen && gameState !== 'PLAYING' && gameState !== 'PAUSED') return;
-            if (shouldOpen && !document.getElementById('questModal').classList.contains('hidden')) return;
+            if (shouldOpen && (isPhoneOpen || !document.getElementById('questModal').classList.contains('hidden'))) return;
 
             const mapModal = document.getElementById('levelMapModal');
             isLevelMapOpen = shouldOpen;
@@ -1650,6 +1689,506 @@
                 keys = {};
                 setSlacking(false);
                 setSprinting(false);
+            }
+        }
+
+        function resetPhoneForLevel() {
+            clearTimeout(phoneAnimationTimer);
+            clearTimeout(phoneToastTimer);
+            phoneTaken = false;
+            phoneBattery = maxPhoneBattery;
+            phoneBatteryDrainTimer = 5 + Math.random() * 10;
+            phoneCaughtTime = 0;
+            phoneChatMessages = [];
+            phoneApp = 'home';
+            phoneUnlocked = false;
+            phoneSignalLevel = Math.floor(Math.random() * 5) + 1;
+            phoneSignalTimer = 2 + Math.random() * 4;
+            phoneLoadRequestId++;
+            isPhoneOpen = false;
+            const modal = document.getElementById('phoneModal');
+            modal.classList.remove('phone-open', 'phone-closing');
+            modal.classList.add('hidden');
+            document.getElementById('phoneConfiscatedToast').classList.remove('phone-toast-visible');
+            renderPhoneChat();
+            updatePhoneStatusBar();
+            updatePhoneDetectionMeter();
+        }
+
+        function updatePhoneStatusBar() {
+            const batteryStatus = document.getElementById('phoneBatteryStatus');
+            if (batteryStatus) batteryStatus.innerText = `${Math.round(phoneBattery)}%`;
+            const batteryFill = document.getElementById('phoneBatteryFill');
+            if (batteryFill) batteryFill.style.width = `${phoneBattery}%`;
+            const signalBars = document.getElementById('phoneSignalBars');
+            if (signalBars) {
+                signalBars.dataset.level = String(phoneSignalLevel);
+                signalBars.setAttribute('aria-label', `Signal strength ${phoneSignalLevel} of 5`);
+            }
+        }
+
+        function updatePhoneDetectionMeter() {
+            const percent = Math.min(100, Math.round(phoneCaughtTime / 5 * 100));
+            const fill = document.getElementById('phoneDetectionFill');
+            const label = document.getElementById('phoneDetectionPercent');
+            if (fill) fill.style.width = `${percent}%`;
+            if (label) label.innerText = `${percent}%`;
+            const meter = document.querySelector('.phone-detection-meter');
+            if (meter) meter.classList.toggle('phone-detection-danger', percent >= 60);
+        }
+
+        function getPhoneLoadDelay() {
+            return [0, 2400, 1700, 1100, 550, 150][phoneSignalLevel];
+        }
+
+        function phoneHomeButtonPressed() {
+            if (isPhoneOpen && phoneUnlocked) openPhoneApp('home');
+        }
+
+        function updatePhoneSignal(dt) {
+            phoneSignalTimer -= dt;
+            if (phoneSignalTimer <= 0) {
+                phoneSignalLevel = Math.floor(Math.random() * 5) + 1;
+                phoneSignalTimer = 2 + Math.random() * 4;
+                updatePhoneStatusBar();
+            }
+            if (phoneBattery <= 0) return;
+            phoneBatteryDrainTimer -= dt;
+            if (phoneBatteryDrainTimer <= 0) {
+                phoneBattery = Math.max(0, phoneBattery - (1 + Math.floor(Math.random() * 3)));
+                phoneBatteryDrainTimer = 5 + Math.random() * 10;
+                updatePhoneStatusBar();
+                if (phoneBattery === 0) {
+                    phoneUnlocked = false;
+                    togglePhone(false);
+                    document.getElementById('statusText').innerText = 'Phone battery empty. It recharges at the start of the next level.';
+                }
+            }
+        }
+
+        function preparePhoneLockScreen() {
+            const isSetup = !phonePin;
+            document.getElementById('phoneLockScreen').classList.remove('hidden');
+            document.getElementById('phoneLockGreeting').classList.remove('hidden');
+            document.getElementById('phonePasscodeEntry').classList.add('hidden');
+            document.getElementById('phoneSwipeUnlock').classList.remove('hidden');
+            document.getElementById('phoneHome').classList.add('hidden');
+            document.getElementById('phoneAppPanel').classList.add('hidden');
+            document.getElementById('phoneLockTitle').innerText = isSetup ? 'Set a Passcode' : 'iPear';
+            document.getElementById('phoneLockMessage').innerText = isSetup
+                ? 'Create a passcode to protect your phone.'
+                : 'Swipe up to unlock.';
+            document.getElementById('phoneLockClock').innerText = new Intl.DateTimeFormat(undefined, {
+                hour: 'numeric',
+                minute: '2-digit'
+            }).format(new Date());
+            document.getElementById('phoneLockDate').innerText = new Intl.DateTimeFormat(undefined, {
+                weekday: 'long',
+                month: 'long',
+                day: 'numeric'
+            }).format(new Date());
+            document.getElementById('phonePinConfirmGroup').classList.toggle('hidden', !isSetup);
+            const confirmInput = document.getElementById('phonePinConfirm');
+            confirmInput.required = isSetup;
+            document.getElementById('phoneLockStatus').innerText = '';
+            document.getElementById('phonePinInput').value = '';
+            confirmInput.value = '';
+            phoneActivePinInput = 'phonePinInput';
+            updatePhoneStatusBar();
+        }
+
+        function beginPhoneUnlockSwipe(event) {
+            phoneUnlockSwipeStartY = event.clientY;
+            if (event.currentTarget.setPointerCapture) event.currentTarget.setPointerCapture(event.pointerId);
+        }
+
+        function finishPhoneUnlockSwipe(event) {
+            if (phoneUnlockSwipeStartY === null) return;
+            const swipeDistance = phoneUnlockSwipeStartY - event.clientY;
+            phoneUnlockSwipeStartY = null;
+            if (swipeDistance >= 45) showPhonePasscodeEntry();
+        }
+
+        function cancelPhoneUnlockSwipe() {
+            phoneUnlockSwipeStartY = null;
+        }
+
+        function handlePhoneUnlockSwipeKey(event) {
+            if (['ArrowUp', 'Enter', ' '].includes(event.key)) {
+                event.preventDefault();
+                showPhonePasscodeEntry();
+            }
+        }
+
+        function showPhonePasscodeEntry() {
+            document.getElementById('phoneLockGreeting').classList.add('hidden');
+            document.getElementById('phonePasscodeEntry').classList.remove('hidden');
+            document.getElementById('phoneSwipeUnlock').classList.add('hidden');
+            const isSetup = !phonePin;
+            document.getElementById('phoneLockTitle').innerText = isSetup ? 'Create Passcode' : 'Enter Passcode';
+            phoneActivePinInput = isSetup ? 'phonePinInput' : 'phonePinInput';
+            document.getElementById(phoneActivePinInput).focus();
+        }
+
+        function addPhonePinDigit(digit) {
+            if (!/^\d$/.test(digit)) return;
+            const input = document.getElementById(phoneActivePinInput);
+            if (!input || input.value.length >= Number(input.maxLength)) return;
+            input.value += digit;
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.focus();
+        }
+
+        function clearPhonePin() {
+            const input = document.getElementById(phoneActivePinInput);
+            if (!input) return;
+            input.value = input.value.slice(0, -1);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.focus();
+        }
+
+        function setPhonePinInput(inputId) {
+            if (inputId === 'phonePinInput' || inputId === 'phonePinConfirm') {
+                phoneActivePinInput = inputId;
+            }
+        }
+
+        function handlePhoneUnlock(event) {
+            event.preventDefault();
+            const input = document.getElementById('phonePinInput');
+            const confirm = document.getElementById('phonePinConfirm');
+            const status = document.getElementById('phoneLockStatus');
+            if (phoneBattery <= 0) {
+                status.innerText = 'The phone battery is empty. It recharges next level.';
+                return;
+            }
+            if (document.getElementById('phonePasscodeEntry').classList.contains('hidden')) {
+                showPhonePasscodeEntry();
+                return;
+            }
+            if (!phonePin) {
+                if (input.value !== confirm.value) {
+                    status.innerText = 'Passcodes do not match.';
+                    confirm.focus();
+                    return;
+                }
+                phonePin = input.value;
+                localStorage.setItem(phonePinStorageKey, phonePin);
+            } else if (input.value !== phonePin) {
+                status.innerText = 'Incorrect passcode.';
+                input.value = '';
+                input.focus();
+                return;
+            }
+            phoneUnlocked = true;
+            document.getElementById('phoneLockScreen').classList.add('hidden');
+            document.getElementById('phoneHome').classList.remove('hidden');
+            input.value = '';
+            confirm.value = '';
+        }
+
+        function changePhonePasscode(event) {
+            event.preventDefault();
+            const current = document.getElementById('phoneCurrentPin').value;
+            const next = document.getElementById('phoneNewPin').value;
+            const confirm = document.getElementById('phoneNewPinConfirm').value;
+            const status = document.getElementById('phoneSettingsStatus');
+            if (current !== phonePin) {
+                status.innerText = 'Current passcode is incorrect.';
+                return;
+            }
+            if (next !== confirm) {
+                status.innerText = 'New passcodes do not match.';
+                return;
+            }
+            phonePin = next;
+            localStorage.setItem(phonePinStorageKey, phonePin);
+            document.getElementById('phoneSettingsForm').reset();
+            status.innerText = 'Passcode updated.';
+        }
+
+        function applyPhoneWallpaper() {
+            const wallpaperTargets = [
+                document.getElementById('phoneLockScreen'),
+                document.getElementById('phoneHome')
+            ];
+            const background = phoneWallpaper
+                ? `linear-gradient(rgba(255, 255, 255, 0.2), rgba(255, 255, 255, 0.2)), url("${phoneWallpaper}")`
+                : '';
+            wallpaperTargets.forEach(target => {
+                target.style.backgroundImage = background;
+                target.classList.toggle('phone-wallpaper-active', Boolean(phoneWallpaper));
+            });
+        }
+
+        function setPhoneWallpaper(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            const status = document.getElementById('phoneWallpaperStatus');
+            if (!['image/png', 'image/jpeg', 'image/gif'].includes(file.type)) {
+                status.innerText = 'Choose a PNG, JPEG, or GIF image.';
+                event.target.value = '';
+                return;
+            }
+            if (file.size > 1.5 * 1024 * 1024) {
+                status.innerText = 'Image is too large. Choose a file under 1.5 MB.';
+                event.target.value = '';
+                return;
+            }
+            status.innerText = 'Loading wallpaper...';
+            const reader = new FileReader();
+            reader.onerror = () => {
+                status.innerText = 'Could not read that image file.';
+                event.target.value = '';
+            };
+            reader.onload = () => {
+                if (typeof reader.result !== 'string') {
+                    status.innerText = 'Could not read that image file.';
+                    event.target.value = '';
+                    return;
+                }
+                try {
+                    localStorage.setItem(phoneWallpaperStorageKey, reader.result);
+                } catch (error) {
+                    status.innerText = error.name === 'QuotaExceededError'
+                        ? 'Not enough browser storage for this wallpaper. Choose a smaller image.'
+                        : 'Could not save the wallpaper.';
+                    return;
+                }
+                phoneWallpaper = reader.result;
+                applyPhoneWallpaper();
+                status.innerText = 'Wallpaper saved for the lock and home screens.';
+                event.target.value = '';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function resetPhoneWallpaper() {
+            localStorage.removeItem(phoneWallpaperStorageKey);
+            phoneWallpaper = '';
+            applyPhoneWallpaper();
+            document.getElementById('phoneWallpaperStatus').innerText = 'Default wallpaper restored.';
+            document.getElementById('phoneWallpaperInput').value = '';
+        }
+
+        function togglePhone(forceOpen) {
+            const shouldOpen = typeof forceOpen === 'boolean' ? forceOpen : !isPhoneOpen;
+            if (shouldOpen === isPhoneOpen) return;
+            if (shouldOpen && gameState !== 'PLAYING' && gameState !== 'PAUSED') return;
+            if (shouldOpen && phoneTaken) return;
+            if (shouldOpen && phoneBattery <= 0) {
+                document.getElementById('statusText').innerText = 'Phone battery empty. It recharges at the start of the next level.';
+                return;
+            }
+            if (shouldOpen && (isLevelMapOpen || !document.getElementById('questModal').classList.contains('hidden'))) return;
+            const modal = document.getElementById('phoneModal');
+            clearTimeout(phoneAnimationTimer);
+            isPhoneOpen = shouldOpen;
+            phoneLoadRequestId++;
+            if (shouldOpen) {
+                phoneBatteryDrainTimer = 5 + Math.random() * 10;
+                clearMobileInputs();
+                keys = {};
+                setSlacking(false);
+                setSprinting(false);
+                phoneApp = 'home';
+                phoneUnlocked = false;
+                preparePhoneLockScreen();
+                modal.classList.remove('hidden');
+                modal.classList.remove('phone-closing');
+                modal.offsetWidth;
+                modal.classList.add('phone-open');
+                document.getElementById('phoneCallStatus').innerText = 'No active call.';
+            } else {
+                modal.classList.remove('phone-open');
+                modal.classList.add('phone-closing');
+                phoneAnimationTimer = setTimeout(() => {
+                    modal.classList.add('hidden');
+                    modal.classList.remove('phone-closing');
+                }, 400);
+                phoneUnlocked = false;
+                keys = {};
+                setSlacking(false);
+                setSprinting(false);
+            }
+        }
+
+        function showPhoneConfiscatedToast() {
+            const toast = document.getElementById('phoneConfiscatedToast');
+            clearTimeout(phoneToastTimer);
+            toast.classList.remove('phone-toast-visible');
+            toast.offsetWidth;
+            toast.classList.add('phone-toast-visible');
+            phoneToastTimer = setTimeout(() => {
+                toast.classList.remove('phone-toast-visible');
+            }, 6500);
+        }
+
+        function openPhoneApp(app) {
+            if (phoneTaken || !phoneUnlocked || phoneBattery <= 0) return;
+            const requestId = ++phoneLoadRequestId;
+            phoneApp = app;
+            document.getElementById('phoneHome').classList.toggle('hidden', app !== 'home');
+            document.getElementById('phoneAppPanel').classList.toggle('hidden', app === 'home');
+            document.querySelectorAll('.phone-app-page').forEach(page => page.classList.add('hidden'));
+            if (app === 'home') return;
+            if (app === 'settings') {
+                document.getElementById('phoneSettingsApp').classList.remove('hidden');
+                document.getElementById('phoneSettingsStatus').innerText = '';
+                return;
+            }
+            if (app === 'call') {
+                document.getElementById('phoneCallApp').classList.remove('hidden');
+                renderPhoneContacts();
+            } else if (app === 'text') {
+                document.getElementById('phoneTextApp').classList.remove('hidden');
+                document.getElementById('phoneTextStatus').innerText = multiplayerSession
+                    ? `Room ${multiplayerSession.code} | Messages are shared with your team.`
+                    : 'Join a multiplayer room to text teammates.';
+                document.getElementById('phoneChatInput').disabled = !multiplayerSession || phoneBattery <= 0;
+                document.getElementById('phoneSendButton').disabled = !multiplayerSession || phoneBattery <= 0;
+                renderPhoneChat();
+            } else {
+                const social = {
+                    tiktok: {
+                        title: '♪ TIKTOK',
+                        posts: [
+                            'POV: the bell rings and you are still in the cafeteria 😭 #schoolday',
+                            'Hallway fit check! Rate the backpack setup 🎒✨',
+                            'When the teacher says “one more worksheet” 💀 #relatable'
+                        ]
+                    },
+                    snap: {
+                        title: '👻 SNAP',
+                        posts: [
+                            'Your friends sent a snap from the courtyard 🌤️',
+                            'Streaks: 3 days 🔥 Send a quick hello!',
+                            'New story: someone found the secret art room 🎨'
+                        ]
+                    },
+                    instagram: {
+                        title: '📸 INSTAGRAM',
+                        posts: [
+                            'ntg_school: Best day to explore campus 📚❤️',
+                            'artclub: Fresh paint, fresh ideas 🎨 #creative',
+                            'cafeteria_reviews: Today’s mystery lunch rating: 7/10 🍕'
+                        ]
+                    }
+                }[app];
+                if (!social) return;
+                document.getElementById('phoneSocialTitle').innerText = social.title;
+                document.getElementById('phoneSocialContent').dataset.posts = JSON.stringify(social.posts);
+                document.getElementById('phoneSocialContent').dataset.postIndex = '0';
+                document.getElementById('phoneSocialContent').innerText = 'Loading feed...';
+                document.getElementById('phoneSocialStatus').innerText = `Signal ${phoneSignalLevel}/5`;
+                const nextButton = document.getElementById('phoneNextPostButton');
+                nextButton.disabled = true;
+                document.getElementById('phoneSocialApp').classList.remove('hidden');
+                document.getElementById('phoneSocialStatus').innerText = `Loading at signal ${phoneSignalLevel}/5...`;
+                setTimeout(() => {
+                    if (requestId !== phoneLoadRequestId || !isPhoneOpen || !phoneUnlocked || phoneTaken || phoneApp !== app) return;
+                    document.getElementById('phoneSocialContent').innerText = social.posts[0];
+                    document.getElementById('phoneSocialStatus').innerText = `Feed loaded (signal ${phoneSignalLevel}/5).`;
+                    nextButton.disabled = false;
+                }, getPhoneLoadDelay());
+            }
+        }
+
+        async function nextPhonePost() {
+            if (!isPhoneOpen || !phoneUnlocked || phoneTaken) return;
+            const content = document.getElementById('phoneSocialContent');
+            const posts = JSON.parse(content.dataset.posts || '[]');
+            if (!posts.length) return;
+            const requestId = ++phoneLoadRequestId;
+            const nextButton = document.getElementById('phoneNextPostButton');
+            nextButton.disabled = true;
+            const requestedSignal = phoneSignalLevel;
+            document.getElementById('phoneSocialStatus').innerText = `Loading at signal ${requestedSignal}/5...`;
+            await new Promise(resolve => setTimeout(resolve, getPhoneLoadDelay()));
+            if (requestId !== phoneLoadRequestId || !isPhoneOpen || !phoneUnlocked || phoneTaken || phoneApp !== 'instagram' && phoneApp !== 'snap' && phoneApp !== 'tiktok') return;
+            const nextIndex = (Number(content.dataset.postIndex || 0) + 1) % posts.length;
+            content.dataset.postIndex = String(nextIndex);
+            content.innerText = posts[nextIndex];
+            document.getElementById('phoneSocialStatus').innerText = `Post loaded (signal ${requestedSignal}/5).`;
+            nextButton.disabled = false;
+        }
+
+        function renderPhoneContacts() {
+            const list = document.getElementById('phoneContactList');
+            if (!multiplayerSession) {
+                list.innerHTML = '<li class="text-xs text-slate-300">Join a multiplayer room to call teammates.</li>';
+                return;
+            }
+            const teammates = multiplayerPlayers.filter(remote => remote.id !== multiplayerSession.playerId);
+            if (!teammates.length) {
+                list.innerHTML = '<li class="text-xs text-slate-300">No teammates are connected yet.</li>';
+                return;
+            }
+            list.replaceChildren(...teammates.map(remote => {
+                const item = document.createElement('li');
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'paint-button w-full px-3 py-2 bg-green-300 text-black text-left font-black text-xs';
+                button.textContent = `📞 Call ${remote.name}`;
+                button.onclick = () => {
+                    document.getElementById('phoneCallStatus').innerText = `Calling ${remote.name}... Voice audio is not available yet.`;
+                };
+                item.append(button);
+                return item;
+            }));
+        }
+
+        function renderPhoneChat() {
+            const log = document.getElementById('phoneChatLog');
+            if (!log) return;
+            log.replaceChildren(...phoneChatMessages.map(message => {
+                const item = document.createElement('li');
+                item.className = 'phone-chat-message';
+                const sender = document.createElement('strong');
+                sender.textContent = `${message.name}: `;
+                item.append(sender, document.createTextNode(message.text));
+                return item;
+            }));
+            log.scrollTop = log.scrollHeight;
+        }
+
+        function addPhoneChatMessage(message) {
+            phoneChatMessages.push(message);
+            if (phoneChatMessages.length > 100) phoneChatMessages.shift();
+            renderPhoneChat();
+        }
+
+        function receivePhoneMessage(message) {
+            if (!message || message.playerId === multiplayerSession?.playerId ||
+                typeof message.name !== 'string' || typeof message.text !== 'string') return;
+            addPhoneChatMessage({
+                name: message.name.slice(0, 16),
+                text: message.text.slice(0, 240)
+            });
+        }
+
+        async function sendPhoneMessage(event) {
+            event.preventDefault();
+            const input = document.getElementById('phoneChatInput');
+            const text = input.value.trim();
+            if (!text || !multiplayerSession || phoneTaken || !phoneUnlocked || phoneBattery <= 0) return;
+            const button = document.getElementById('phoneSendButton');
+            const status = document.getElementById('phoneTextStatus');
+            const requestId = ++phoneLoadRequestId;
+            const requestedSignal = phoneSignalLevel;
+            button.disabled = true;
+            status.innerText = `Sending at signal ${requestedSignal}/5...`;
+            try {
+                await new Promise(resolve => setTimeout(resolve, getPhoneLoadDelay()));
+                if (requestId !== phoneLoadRequestId || !isPhoneOpen || !phoneUnlocked || phoneTaken) return;
+                await window.NTGMultiplayerAPI.sendChat(text);
+                addPhoneChatMessage({ name: multiplayerSession.name, text });
+                input.value = '';
+                status.innerText = `Message sent (signal ${requestedSignal}/5).`;
+            } catch (error) {
+                status.innerText = error.message || 'Could not send message.';
+            } finally {
+                button.disabled = !multiplayerSession || phoneTaken || !phoneUnlocked;
             }
         }
 
@@ -1805,6 +2344,10 @@
                     Object.keys(keybinds).forEach(action => {
                         if (typeof savedOptions.keybinds[action] === 'string') keybinds[action] = savedOptions.keybinds[action];
                     });
+                    if (savedOptions.keybinds.map === 'Tab' && !savedOptions.keybinds.phone) {
+                        keybinds.map = defaultKeybinds.map;
+                    }
+                    if (keybinds.map === keybinds.phone) keybinds.map = defaultKeybinds.map;
                 }
             } catch (error) {
                 localStorage.removeItem(optionsStorageKey);
@@ -1856,6 +2399,9 @@
             canvas.style.width = `${resolution}px`;
             canvas.style.height = `${resolution * 0.5625}px`;
             canvas.style.maxWidth = '100%';
+            const appWindow = document.getElementById('appWindow');
+            appWindow.style.width = `min(${resolution + 40}px, calc(100vw - 2rem))`;
+            appWindow.style.maxWidth = 'none';
             const selectedTheme = document.getElementById('themeOption').value;
             document.body.dataset.theme = selectedTheme;
             if (selectedTheme === 'dynamic') {
@@ -2365,6 +2911,7 @@
         }
 
         function startLevel2() {
+            resetPhoneForLevel();
             level = 2;
             resetLevel2Platforms();
             resetLevelObjectives(['History', 'Chemistry', 'MusicClass']);
@@ -2401,6 +2948,7 @@
                 return;
             }
 
+            resetPhoneForLevel();
             level++;
             const hubKey = setupGeneratedLevel(level);
             initializeLevelSecurityCameras();
@@ -2430,6 +2978,7 @@
         }
 
         function showLevel1Complete() {
+            if (isPhoneOpen) togglePhone(false);
             gameState = 'LEVEL1_COMPLETE';
             isSlacking = false;
             registerLevelCompletion();
@@ -2488,6 +3037,7 @@
 
         function returnToMenu() {
             if (questProgressDirty) saveProgression();
+            if (isPhoneOpen) togglePhone(false);
             closeMultiplayerConnections();
             multiplayerPlayers = [];
             remotePlayers = [];
@@ -3337,6 +3887,7 @@
 
         function triggerGameOver(reason) {
             if (multiplayerSession && rescueWithTeammate()) return;
+            if (isPhoneOpen) togglePhone(false);
             gameState = 'GAMEOVER';
             document.getElementById('nextLevelBtn').classList.add('hidden');
             document.getElementById('retryLevelBtn').classList.remove('hidden');
@@ -3587,6 +4138,7 @@
             const dt = Math.min((timestamp - lastTimestamp) / 1000, 0.05);
             lastTimestamp = timestamp;
 
+            if (isPhoneOpen) updatePhoneSignal(dt);
             if (gameState === 'PLAYING' && !isPaused) {
                 update(dt);
             }
@@ -3986,8 +4538,10 @@
             collectRoomCoins(room);
 
             // Level 2 detention monitors patrol faster and one monitor homes in on the player.
+            let monitorWatchingPlayer = false;
             if (room.enemies) {
                 room.enemies.forEach(enemy => {
+                    if (enemy.chase && Math.abs(player.x - enemy.x) < 300) monitorWatchingPlayer = true;
                     if (enemy.chase && Math.abs(player.x - enemy.x) < 300) {
                         enemy.x += Math.sign(player.x - enemy.x) * 55 * dt;
                     } else {
@@ -4004,6 +4558,7 @@
                 });
             }
 
+            let reporterWatchingPlayer = false;
             if (room.reporters) {
                 room.reporters.forEach(reporter => {
                     reporter.x += reporter.dir * reporter.speed * dt;
@@ -4014,6 +4569,7 @@
 
                     const nearby = Math.abs((player.x + player.w / 2) - reporter.x) < reporter.range &&
                         Math.abs((player.y + player.h / 2) - reporter.y) < 75;
+                    if (nearby && !(reporter.bribeCooldown > 0)) reporterWatchingPlayer = true;
                     if (isSlacking && nearby && !player.canStealth && !(reporter.bribeCooldown > 0)) {
                         reporter.timer += dt;
                         if (reporter.timer > 0.7 && !reporter.reported) {
@@ -4042,6 +4598,7 @@
             }
 
             let teacherSpotted = false;
+            let teacherWatchingPlayer = false;
 
             // Teacher Patrol AI Stealth Logic
             if (room.teacher) {
@@ -4126,18 +4683,18 @@
                     top: teacherEyeY - 90,
                     bottom: teacherEyeY + 90
                 };
-                teacherSpotted = (t.state === 'LOOKING' || t.state === 'SUSPICIOUS') &&
-                    isSlacking &&
+                teacherWatchingPlayer = (t.state === 'LOOKING' || t.state === 'SUSPICIOUS') &&
                     player.x + player.w >= teacherVision.left &&
                     player.x <= teacherVision.right &&
                     player.y + player.h >= teacherVision.top &&
                     player.y <= teacherVision.bottom;
+                teacherSpotted = isSlacking && teacherWatchingPlayer;
                 if (teacherSpotted) updateStealthAlert(dt, 'teacher', t);
             } else {
                 slackingCaughtCooldown = Math.max(0, slackingCaughtCooldown - dt);
             }
 
-            const cameraSpotted = isSlacking && (room.securityCameras || []).some(camera => {
+            const cameraWatchingPlayer = (room.securityCameras || []).some(camera => {
                 const cameraVision = {
                     left: camera.x - camera.rangeX / 2,
                     right: camera.x + camera.rangeX / 2,
@@ -4149,12 +4706,19 @@
                     player.y + player.h >= cameraVision.top &&
                     player.y <= cameraVision.bottom;
             });
+            const cameraSpotted = isSlacking && cameraWatchingPlayer;
             if (cameraSpotted && !teacherSpotted) updateStealthAlert(dt, 'camera');
             if (gameState === 'GAMEOVER') return;
-            if (!teacherSpotted && !cameraSpotted) {
-                teacherAlertTimer = Math.max(0, teacherAlertTimer - dt);
+            const phoneDetected = teacherWatchingPlayer || cameraWatchingPlayer || reporterWatchingPlayer || monitorWatchingPlayer;
+            if (isPhoneOpen && phoneDetected && !phoneTaken) {
+                phoneCaughtTime = Math.min(5, phoneCaughtTime + dt);
+                updatePhoneDetectionMeter();
+                if (phoneCaughtTime >= 5) {
+                    phoneTaken = true;
+                    togglePhone(false);
+                    showPhoneConfiscatedToast();
+                }
             }
-
             // Gym Hazard Dodgeballs
             if (currentRoomKey === 'Gym') {
                 if (!room.balls) room.balls = [];
@@ -5427,35 +5991,54 @@
         function drawHUD() {
             const energyPercent = Math.round((energy / maxEnergy) * 100);
             const staminaPercent = Math.round((sprintStamina / maxSprintStamina) * 100);
+            const phoneBatteryPercent = Math.round((phoneBattery / maxPhoneBattery) * 100);
             const energyColor = energyPercent > 60 ? '#28c76f' : (energyPercent > 30 ? '#ffd43b' : '#ff4d4f');
             const staminaColor = staminaPercent > 45 ? '#36a3ff' : (staminaPercent > 15 ? '#ff9f43' : '#b66dff');
-            ctx.fillStyle = '#000000';
-            ctx.font = 'bold 14px "Comic Sans MS"';
-            ctx.fillText(`AWAKE ENERGY: ${energyPercent}%`, 580, 25);
+            const phoneBatteryColor = phoneBatteryPercent > 30 ? '#28c76f' : (phoneBatteryPercent > 10 ? '#ffd43b' : '#ff4d4f');
+            const core = [homeworkDone.Math, homeworkDone.ELA, homeworkDone.Science, homeworkDone.Gym].filter(Boolean).length;
             ctx.fillStyle = '#000000';
             ctx.font = 'bold 12px "Comic Sans MS"';
-            const core = [homeworkDone.Math, homeworkDone.ELA, homeworkDone.Science, homeworkDone.Gym].filter(Boolean).length;
+            ctx.textAlign = 'left';
             ctx.fillText(`CORE CLASSES: ${core}/4`, 30, 425);
 
-            ctx.fillStyle = '#e0e0e0';
-            ctx.fillRect(580, 35, 180, 18);
-            
-            ctx.fillStyle = energyColor;
-            ctx.fillRect(580, 35, Math.max(0, energyPercent * 1.8), 18);
-            
+            const resourcePanel = { x: 550, y: 7, width: 242, height: 102 };
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(resourcePanel.x + 3, resourcePanel.y + 3, resourcePanel.width, resourcePanel.height);
+            ctx.fillStyle = '#fff9dc';
+            ctx.fillRect(resourcePanel.x, resourcePanel.y, resourcePanel.width, resourcePanel.height);
             ctx.strokeStyle = '#000000';
             ctx.lineWidth = 2;
-            ctx.strokeRect(580, 35, 180, 18);
+            ctx.strokeRect(resourcePanel.x, resourcePanel.y, resourcePanel.width, resourcePanel.height);
 
             ctx.fillStyle = '#000000';
-            ctx.font = 'bold 12px "Comic Sans MS"';
-            ctx.fillText(`SPRINT STAMINA: ${staminaPercent}%${player.sprintLocked ? ' RECOVER' : ''}`, 580, 68);
-            ctx.fillStyle = '#e0e0e0';
-            ctx.fillRect(580, 76, 180, 12);
-            ctx.fillStyle = staminaColor;
-            ctx.fillRect(580, 76, staminaPercent * 1.8, 12);
-            ctx.strokeStyle = '#000000';
-            ctx.strokeRect(580, 76, 180, 12);
+            ctx.font = 'bold 10px "Comic Sans MS"';
+            ctx.textAlign = 'left';
+            ctx.fillText('Player Stats', resourcePanel.x + 8, resourcePanel.y + 13);
+
+            const resourceRows = [
+                { label: 'AWAKE ENERGY', percent: energyPercent, color: energyColor },
+                { label: `SPRINT STAMINA${player.sprintLocked ? ' · RECOVER' : ''}`, percent: staminaPercent, color: staminaColor },
+                { label: 'PHONE BATTERY', percent: phoneBatteryPercent, color: phoneBatteryColor }
+            ];
+            resourceRows.forEach((resource, index) => {
+                const rowY = resourcePanel.y + 19 + index * 26;
+                ctx.font = 'bold 9px "Comic Sans MS"';
+                ctx.textAlign = 'left';
+                ctx.fillStyle = '#111111';
+                ctx.fillText(resource.label, resourcePanel.x + 8, rowY + 9);
+                ctx.textAlign = 'right';
+                ctx.fillText(`${resource.percent}%`, resourcePanel.x + resourcePanel.width - 8, rowY + 9);
+
+                const bar = { x: resourcePanel.x + 8, y: rowY + 13, width: resourcePanel.width - 16, height: 7 };
+                ctx.fillStyle = '#d6d3c8';
+                ctx.fillRect(bar.x, bar.y, bar.width, bar.height);
+                ctx.fillStyle = resource.color;
+                ctx.fillRect(bar.x, bar.y, bar.width * resource.percent / 100, bar.height);
+                ctx.strokeStyle = '#111111';
+                ctx.lineWidth = 1;
+                ctx.strokeRect(bar.x, bar.y, bar.width, bar.height);
+            });
+            ctx.textAlign = 'left';
 
             ctx.fillStyle = '#000000';
             ctx.font = 'bold 12px "Comic Sans MS"';
@@ -5495,6 +6078,8 @@
 
         loadProgression();
         loadOptions();
+        updatePhoneStatusBar();
+        applyPhoneWallpaper();
         document.getElementById('multiplayerName').value = localStorage.getItem('ntg-player-name') || '';
         updateKeybindLabels();
         applyOptions();

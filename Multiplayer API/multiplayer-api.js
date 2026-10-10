@@ -63,6 +63,13 @@
             if (this.activeEngine) this.activeEngine.sendState(state);
         }
 
+        sendChat(message) {
+            if (!this.activeEngine || typeof this.activeEngine.sendChat !== 'function') {
+                throw new Error('Chat is unavailable with the current multiplayer connection.');
+            }
+            return this.activeEngine.sendChat(message);
+        }
+
         leaveRoom() {
             if (this.activeEngine) this.activeEngine.leaveRoom();
         }
@@ -75,6 +82,11 @@
         onPlayer(callback) {
             if (this.peerEngine) this.peerEngine.onPlayer(callback);
             if (this.serverAdapter) this.serverAdapter.onPlayer(callback);
+        }
+
+        onChat(callback) {
+            if (this.peerEngine) this.peerEngine.onChat(callback);
+            if (this.serverAdapter) this.serverAdapter.onChat(callback);
         }
 
         onDisconnect(callback) {

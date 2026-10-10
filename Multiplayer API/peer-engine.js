@@ -26,6 +26,10 @@
         return String(val || '').replace(/[<>\u0000-\u001f]/g, '').trim().slice(0, 16) || 'Player';
     }
 
+    function cleanChatMessage(val) {
+        return String(val || '').replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 240);
+    }
+
     class PeerEngine {
         constructor() {
             this.peer = null;
@@ -38,6 +42,7 @@
             this.guestConns = new Map(); // Host connections to guests (playerId => DataConnection)
             this.onRosterCallback = null;
             this.onPlayerCallback = null;
+            this.onChatCallback = null;
             this.onDisconnectCallback = null;
         }
 
@@ -190,6 +195,24 @@
             }
         }
 
+        sendChat(text) {
+            const message = cleanChatMessage(text);
+            if (!message) throw new Error('Type a message before sending.');
+            const chat = {
+                type: 'chat',
+                playerId: this.playerId,
+                name: this.playerName,
+                text: message
+            };
+            if (this.role === 'host' && this.room) {
+                this._broadcastToGuests(chat);
+            } else if (this.role === 'guest' && this.hostConn && this.hostConn.open) {
+                this.hostConn.send(chat);
+            } else {
+                throw new Error('Chat is unavailable because you are not connected to a room.');
+            }
+        }
+
         leaveRoom() {
             if (this.role === 'guest' && this.hostConn && this.hostConn.open) {
                 this.hostConn.send({ type: 'leave' });
@@ -218,6 +241,7 @@
 
         onRoster(cb) { this.onRosterCallback = cb; }
         onPlayer(cb) { this.onPlayerCallback = cb; }
+        onChat(cb) { this.onChatCallback = cb; }
         onDisconnect(cb) { this.onDisconnectCallback = cb; }
 
         _waitForOpen(peer) {
@@ -292,6 +316,13 @@
                         this.onPlayerCallback({ id: player.id, name: player.name, color: player.color, state: player.state });
                     }
                 }
+            } else if (msg.type === 'chat') {
+                const player = this.room.players.get(guestId);
+                const text = cleanChatMessage(msg.text);
+                if (!player || !text) return;
+                const chat = { type: 'chat', playerId: player.id, name: player.name, text };
+                this._broadcastToGuests(chat, guestId);
+                if (this.onChatCallback) this.onChatCallback(chat);
             } else if (msg.type === 'leave') {
                 this._removeGuest(guestId);
             }
@@ -324,6 +355,8 @@
                     this.onRosterCallback(data.players);
                 } else if (data.type === 'player' && this.onPlayerCallback) {
                     this.onPlayerCallback(data.player);
+                } else if (data.type === 'chat' && this.onChatCallback) {
+                    this.onChatCallback(data);
                 }
             });
         }

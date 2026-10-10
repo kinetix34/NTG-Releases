@@ -4,22 +4,15 @@
 
 # Is there something new 👀
 Probably not
-## v1.4 - Content/Patches
-- Made mobile controls more bearable
-- Made more fun level gen
-- Shop upgrade with new items
-- Levels 3 and up now have bonus rooms
-- Removed the redundant status bar
-- Skyline Scramble level 2
-- Hold down key while on ground for slide (also can now lay on floor like this)
-- Implemented some level features for ground pound
+## v1.5 - Big and Bountiful 
+- Phone 
+this took eons, its big and bountiful because i was forced to update the API. 1.6 is going to include patches and some bug fixes.
 ## Things that are TOTALLY not broken
 - Scanning for ALL avalible servers, regardless of server type (idk why, the API is totally impeccable😤)
-# Upcoming
-## Expect 1.5 to be big and bountiful! hollon im cooking with that update name...
+# Coming later
 - Custom player model
 - Skyline scramble level 3??? 👀
 - More levels, maybe...50?
 - API update 🫩 (boring but needed)
-- Defninite 1.5/6, Phone feature
-- Definite: Actual class time of about 30s or 1m
+# Coming in the next update
+- Actual class time of about 30s or 1m
